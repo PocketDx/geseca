@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "clientes",
     "catalogo",
     "ordenes",
+    "fidelizacion",
 ]
 
 MIDDLEWARE = [
