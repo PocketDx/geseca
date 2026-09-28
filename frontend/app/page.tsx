@@ -9,7 +9,7 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
+    <main className="mx-auto max-w-2xl p-4 sm:p-8">
       <header className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">SmartWash</h1>
         <LogoutButton />
