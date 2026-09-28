@@ -94,8 +94,6 @@ class ActuarComoView(APIView):
 
 
 class HistorialUsuarioView(generics.ListAPIView):
-    """Historial de acciones de un usuario puntual (HU04)."""
-
     serializer_class = HistorialAccionSerializer
 
     def get_queryset(self):
@@ -103,8 +101,6 @@ class HistorialUsuarioView(generics.ListAPIView):
 
 
 class TrazabilidadView(generics.ListAPIView):
-    """Trazabilidad global, filtrable por tipo de usuario (HU04)."""
-
     serializer_class = AccionAuditoriaSerializer
 
     def get_queryset(self):

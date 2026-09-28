@@ -23,13 +23,13 @@ class User(AbstractUser):
 
 
 class RegistroAuditoria(models.Model):
-    """Historial de acciones sobre una cuenta interna (HU04 / SCRUM-66).
+    """Historial de acciones sobre una cuenta interna.
 
     Se alimenta por senal (ver accounts/signals.py) a partir de los
     guardados de User, no de las vistas: asi queda completo sin importar
     si el cambio vino de la API, del admin o de un comando de gestion.
-    Inmutable a proposito (RF11): no hay endpoint ni admin que permita
-    editar o borrar un registro, solo crearlo.
+    Inmutable a proposito: no hay endpoint ni admin que permita editar o
+    borrar un registro, solo crearlo.
     """
 
     class TipoUsuario(models.TextChoices):

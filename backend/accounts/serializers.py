@@ -18,7 +18,7 @@ class ActuarComoSerializer(serializers.Serializer):
 
 
 class HistorialAccionSerializer(serializers.ModelSerializer):
-    """Historial de un usuario puntual (HU04): /api/usuarios/{id}/historial."""
+    """Historial de un usuario puntual: /api/usuarios/{id}/historial."""
 
     class Meta:
         model = RegistroAuditoria
@@ -26,7 +26,7 @@ class HistorialAccionSerializer(serializers.ModelSerializer):
 
 
 class AccionAuditoriaSerializer(serializers.ModelSerializer):
-    """Trazabilidad global entre usuarios (HU04): /api/usuarios/trazabilidad."""
+    """Trazabilidad global entre usuarios: /api/usuarios/trazabilidad."""
 
     usuario_id = serializers.IntegerField(read_only=True)
     usuario = serializers.CharField(source="usuario_nombre", read_only=True)

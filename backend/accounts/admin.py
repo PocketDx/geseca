@@ -14,7 +14,7 @@ class SmartWashUserAdmin(UserAdmin):
 
 @admin.register(RegistroAuditoria)
 class RegistroAuditoriaAdmin(admin.ModelAdmin):
-    """Solo lectura: los registros de auditoria no se editan ni se borran (RF11)."""
+    """Solo lectura: los registros de auditoria no se editan ni se borran."""
 
     list_display = ("usuario_nombre", "tipo_usuario", "accion", "fecha")
     list_filter = ("tipo_usuario", "accion")

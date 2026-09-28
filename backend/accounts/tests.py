@@ -90,8 +90,6 @@ class ActuarComoTests(APITestCase):
 
 
 class AuditoriaTests(APITestCase):
-    """HU04: consultar el historial de acciones de cada usuario."""
-
     def setUp(self):
         self.admin = User.objects.create_user(
             username="admin", password="smartwash123", rol=User.Rol.ADMINISTRADOR
