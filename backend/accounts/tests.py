@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient, APITestCase
+from django.test import override_settings
 
 User = get_user_model()
 
@@ -53,3 +54,34 @@ class AuthTests(APITestCase):
         self.client.login(username="recepcion", password="smartwash123")
         self.assertEqual(self.client.post("/api/auth/logout").status_code, 204)
         self.assertEqual(self.client.get("/api/auth/me").status_code, 403)
+
+class ActuarComoTests(APITestCase):
+    def setUp(self):
+        User.objects.create_user(
+            username="recepcion", password="smartwash123", rol=User.Rol.RECEPCIONISTA
+        )
+        User.objects.create_user(
+            username="operario1", password="smartwash123", rol=User.Rol.OPERARIO
+        )
+        self.client.login(username="recepcion", password="smartwash123")
+
+    @override_settings(DEBUG=True)
+    def test_switches_the_session_to_another_seeded_account(self):
+        response = self.client.post(
+            "/api/auth/actuar-como", {"username": "operario1"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get("/api/auth/me").json()["username"], "operario1")
+
+    @override_settings(DEBUG=True)
+    def test_rejects_a_username_outside_the_seeded_list(self):
+        User.objects.create_user(username="intruso", password="x")
+        response = self.client.post("/api/auth/actuar-como", {"username": "intruso"})
+        self.assertEqual(response.status_code, 400)
+
+    @override_settings(DEBUG=False)
+    def test_is_not_available_outside_debug(self):
+        self.assertEqual(
+            self.client.post("/api/auth/actuar-como", {"username": "operario1"}).status_code,
+            404,
+        )

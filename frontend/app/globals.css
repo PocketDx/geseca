@@ -1,8 +1,27 @@
 @import "tailwindcss";
 
+/* Paleta clay de SmartWash: base clara azul-grisacea ("agua limpia"), acentos
+   pastel por dominio. Abstraida del claymorphism de la prueba visual de
+   Crezza, pero con paleta propia (esta no es una app de creditos). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #eef3f8;
+  --foreground: #1f2937;
+
+  --sw-surface: #ffffff;
+  --sw-bg-deep: #e3ecf5;
+  --sw-blue-pastel: #cfe6f7;
+  --sw-mint: #d7f0e3;
+  --sw-lavender: #e6e1f5;
+  --sw-peach: #fbe6d8;
+  --sw-ink: #1f2937;
+  --sw-ink-soft: #5b6b7c;
+
+  --sw-shadow-out: 8px 8px 18px rgba(31, 58, 82, 0.12), -7px -7px 14px rgba(255, 255, 255, 0.85);
+  --sw-shadow-out-sm: 5px 5px 12px rgba(31, 58, 82, 0.1), -4px -4px 10px rgba(255, 255, 255, 0.8);
+  --sw-shadow-inset: inset 1px 1px 2px rgba(255, 255, 255, 0.6), inset -1px -1px 3px rgba(31, 58, 82, 0.08);
+  --sw-shadow-press:
+    inset 3px 3px 7px rgba(31, 58, 82, 0.14),
+    inset -3px -3px 7px rgba(255, 255, 255, 0.7);
 }
 
 @theme inline {
@@ -12,8 +31,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #10151c;
+    --foreground: #e7edf3;
+
+    --sw-surface: #1a212b;
+    --sw-bg-deep: #0c1016;
+    --sw-blue-pastel: #23384a;
+    --sw-mint: #1e3a30;
+    --sw-lavender: #2c2740;
+    --sw-peach: #3a2a20;
+    --sw-ink: #e7edf3;
+    --sw-ink-soft: #9fb0c0;
+
+    --sw-shadow-out: 8px 8px 18px rgba(0, 0, 0, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.03);
+    --sw-shadow-out-sm: 5px 5px 12px rgba(0, 0, 0, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.03);
+    --sw-shadow-inset: inset 1px 1px 2px rgba(255, 255, 255, 0.04), inset -1px -1px 3px rgba(0, 0, 0, 0.3);
+    --sw-shadow-press:
+      inset 3px 3px 7px rgba(0, 0, 0, 0.5),
+      inset -3px -3px 7px rgba(255, 255, 255, 0.03);
   }
 }
 
@@ -21,4 +56,52 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: system-ui, sans-serif;
+}
+
+/* Tarjeta "de plastilina": sombra doble (luz abajo-derecha, highlight
+   arriba-izquierda) mas un inset sutil que simula superficie moldeada. */
+.clay {
+  border-radius: 26px;
+  background: var(--sw-surface);
+  box-shadow: var(--sw-shadow-out), var(--sw-shadow-inset);
+}
+
+.clay-sm {
+  border-radius: 18px;
+  background: var(--sw-surface);
+  box-shadow: var(--sw-shadow-out-sm), var(--sw-shadow-inset);
+}
+
+.clay-lg {
+  border-radius: 32px;
+  background: var(--sw-surface);
+  box-shadow: var(--sw-shadow-out), var(--sw-shadow-inset);
+}
+
+/* Estado "presionado": el elemento se hunde en vez de flotar. Para el enlace
+   activo del nav y los inputs (que deben leerse como huecos, no como botones). */
+.clay-press {
+  box-shadow: var(--sw-shadow-press);
+}
+
+.clay-input {
+  border-radius: 14px;
+  background: var(--sw-bg-deep);
+  box-shadow: var(--sw-shadow-press);
+  border: none;
+}
+
+.clay-btn {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.clay-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+.clay-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--sw-shadow-press);
+}
+.clay-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
