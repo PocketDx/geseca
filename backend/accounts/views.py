@@ -91,8 +91,6 @@ class ActuarComoView(APIView):
 
 
 class UsuarioInternoListCreateView(generics.ListCreateAPIView):
-    """Alta y listado de usuarios internos (HU03)."""
-
     queryset = get_user_model().objects.all().order_by("username")
 
     def get_serializer_class(self):
@@ -100,16 +98,13 @@ class UsuarioInternoListCreateView(generics.ListCreateAPIView):
 
 
 class UsuarioInternoDetailView(generics.RetrieveUpdateAPIView):
-    """Consulta y edicion de un usuario interno (HU03). Sin destroy: la baja
-    es "desactivar", no borrar (ver UsuarioDesactivarView)."""
+    """Sin destroy: la baja es "desactivar", no borrar (ver UsuarioDesactivarView)."""
 
     queryset = get_user_model().objects.all()
     serializer_class = UsuarioInternoSerializer
 
 
 class UsuarioDesactivarView(APIView):
-    """Desactiva un usuario interno sin borrarlo (HU03)."""
-
     def post(self, request, pk):
         usuario = get_object_or_404(get_user_model(), pk=pk)
         usuario.is_active = False

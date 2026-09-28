@@ -88,8 +88,6 @@ class ActuarComoTests(APITestCase):
 
 
 class UsuarioInternoTests(APITestCase):
-    """HU03: crear, editar y desactivar usuarios internos asignandoles un rol."""
-
     def setUp(self):
         self.admin = User.objects.create_user(
             username="admin", password="smartwash123", rol=User.Rol.ADMINISTRADOR

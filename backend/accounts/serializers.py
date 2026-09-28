@@ -18,8 +18,7 @@ class ActuarComoSerializer(serializers.Serializer):
 
 
 class UsuarioAdminSerializer(serializers.ModelSerializer):
-    """Usuario interno para la pantalla de administracion (HU03): agrega
-    is_active, que UserSerializer no expone porque /auth/me no lo necesita."""
+    """Agrega is_active a UserSerializer, que /auth/me no expone porque no lo necesita."""
 
     class Meta:
         model = User
