@@ -43,8 +43,6 @@ class ReglaDescuentoModelTests(TestCase):
 
 
 class ReglaDescuentoApiTests(APITestCase):
-    """HU08: configurar reglas de descuento."""
-
     def setUp(self):
         self.admin = User.objects.create_user(
             username="admin", password="smartwash123", rol=User.Rol.ADMINISTRADOR

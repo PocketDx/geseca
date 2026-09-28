@@ -5,11 +5,10 @@ from core.models import ModeloConAutoria
 
 
 class ReglaDescuento(ModeloConAutoria):
-    """Regla de descuento configurable (HU08 / SCRUM-74).
+    """Regla de descuento configurable.
 
-    Queda disponible para aplicarse en ordenes futuras; esta historia solo
-    cubre su configuracion (crear/editar), no la aplicacion automatica en
-    una orden, que es un alcance distinto.
+    Solo cubre crearla/editarla; aplicarla automaticamente sobre una
+    orden es un alcance distinto, no implementado aqui.
     """
 
     class Tipo(models.TextChoices):
@@ -36,11 +35,9 @@ class ReglaDescuento(ModeloConAutoria):
                 condition=models.Q(valor__gte=0), name="regla_descuento_valor_no_negativo"
             ),
             models.CheckConstraint(
-                # La regla de negocio (HU08): un descuento porcentual no
-                # puede superar el 100% del valor de la orden. Un monto
-                # fijo no tiene ese tope: es una suma, no un porcentaje.
-                # (Un literal, no Tipo.PORCENTAJE: el cuerpo de Meta no ve
-                # los nombres de la clase que lo contiene.)
+                # Un monto fijo no tiene tope: es una suma en pesos, no un
+                # porcentaje. Literal "porcentaje", no Tipo.PORCENTAJE: el
+                # cuerpo de Meta no ve los nombres de la clase que lo contiene.
                 condition=~models.Q(tipo="porcentaje") | models.Q(valor__lte=100),
                 name="regla_descuento_porcentaje_no_supera_100",
             ),
