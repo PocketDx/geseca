@@ -12,3 +12,6 @@ class UserSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(style={"input_type": "password"})
+
+class ActuarComoSerializer(serializers.Serializer):
+    username = serializers.CharField()

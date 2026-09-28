@@ -81,3 +81,18 @@ export async function getCurrentUser(
     return null;
   }
 }
+
+/** Cuentas sembradas para el selector "actuar como". Null si no aplica (prod). */
+export async function getCuentasDesarrollo(): Promise<User[] | null> {
+  const response = await api("/auth/actuar-como");
+  return response.ok ? ((await response.json()) as User[]) : null;
+}
+
+export async function actuarComo(username: string): Promise<User | null> {
+  const response = await api("/auth/actuar-como", {
+    method: "POST",
+    body: { username },
+  });
+  return response.ok ? ((await response.json()) as User) : null;
+}
+

@@ -1,6 +1,11 @@
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.utils.decorators import method_decorator
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.http import Http404
+from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -47,3 +52,40 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+from .serializers import ActuarComoSerializer  # agrega este import junto a los otros de .serializers
+
+# Cuentas fijas que puede tomar el selector de desarrollo. Nunca se acepta un
+# username fuera de esta lista, aunque el request lo pida.
+USUARIOS_DESARROLLO = ("admin", "recepcion", "operario1", "operario2")
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class ActuarComoView(APIView):
+    """Cambia la sesion a una cuenta sembrada, sin pedir contrasena.
+
+    Solo existe con DEBUG=True: en produccion responde 404 en ambos metodos,
+    asi que el selector del frontend se oculta solo. Se elimina en T8 (SCRUM-57).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not settings.DEBUG:
+            raise Http404
+        usuarios = get_user_model().objects.filter(username__in=USUARIOS_DESARROLLO)
+        return Response(UserSerializer(usuarios, many=True).data)
+
+    def post(self, request):
+        if not settings.DEBUG:
+            raise Http404
+        data = ActuarComoSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        username = data.validated_data["username"]
+        if username not in USUARIOS_DESARROLLO:
+            return Response(
+                {"detail": "Cuenta no permitida."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        usuario = get_object_or_404(get_user_model(), username=username)
+        login(request, usuario)
+        return Response(UserSerializer(usuario).data)
