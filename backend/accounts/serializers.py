@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import User
+from .models import RegistroAuditoria, User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -17,36 +17,20 @@ class ActuarComoSerializer(serializers.Serializer):
     username = serializers.CharField()
 
 
-class UsuarioAdminSerializer(serializers.ModelSerializer):
-    """Agrega is_active a UserSerializer, que /auth/me no expone porque no lo necesita."""
+class HistorialAccionSerializer(serializers.ModelSerializer):
+    """Historial de un usuario puntual: /api/usuarios/{id}/historial."""
 
     class Meta:
-        model = User
-        fields = ("id", "username", "email", "first_name", "last_name", "rol", "is_active")
+        model = RegistroAuditoria
+        fields = ("id", "accion", "detalle", "fecha")
 
 
-class UsuarioInternoSerializer(serializers.ModelSerializer):
-    # Obligatoria al crear; opcional al editar (PATCH sin password no la toca).
-    password = serializers.CharField(write_only=True, required=False, style={"input_type": "password"})
+class AccionAuditoriaSerializer(serializers.ModelSerializer):
+    """Trazabilidad global entre usuarios: /api/usuarios/trazabilidad."""
+
+    usuario_id = serializers.IntegerField(read_only=True)
+    usuario = serializers.CharField(source="usuario_nombre", read_only=True)
 
     class Meta:
-        model = User
-        fields = ("id", "username", "email", "first_name", "last_name", "rol", "is_active", "password")
-        read_only_fields = ("is_active",)  # se cambia solo via el endpoint de desactivar
-
-    def validate(self, attrs):
-        if self.instance is None and not attrs.get("password"):
-            raise serializers.ValidationError({"password": "La contraseña es obligatoria al crear un usuario."})
-        return attrs
-
-    def create(self, validated_data):
-        password = validated_data.pop("password")
-        return User.objects.create_user(password=password, **validated_data)
-
-    def update(self, instance, validated_data):
-        password = validated_data.pop("password", None)
-        instance = super().update(instance, validated_data)
-        if password:
-            instance.set_password(password)
-            instance.save(update_fields=["password"])
-        return instance
+        model = RegistroAuditoria
+        fields = ("id", "usuario_id", "usuario", "tipo_usuario", "accion", "detalle", "fecha")

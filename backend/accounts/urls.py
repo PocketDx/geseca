@@ -2,12 +2,11 @@ from django.urls import path
 
 from .views import (
     ActuarComoView,
+    HistorialUsuarioView,
     LoginView,
     LogoutView,
     MeView,
-    UsuarioDesactivarView,
-    UsuarioInternoDetailView,
-    UsuarioInternoListCreateView,
+    TrazabilidadView,
 )
 
 urlpatterns = [
@@ -15,7 +14,6 @@ urlpatterns = [
     path("auth/logout", LogoutView.as_view(), name="logout"),
     path("auth/me", MeView.as_view(), name="me"),
     path("auth/actuar-como", ActuarComoView.as_view(), name="actuar-como"),
-    path("usuarios", UsuarioInternoListCreateView.as_view(), name="usuarios"),
-    path("usuarios/<int:pk>", UsuarioInternoDetailView.as_view(), name="usuario-detalle"),
-    path("usuarios/<int:pk>/desactivar", UsuarioDesactivarView.as_view(), name="usuario-desactivar"),
+    path("usuarios/trazabilidad", TrazabilidadView.as_view(), name="usuarios-trazabilidad"),
+    path("usuarios/<int:pk>/historial", HistorialUsuarioView.as_view(), name="usuario-historial"),
 ]

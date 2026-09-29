@@ -5,12 +5,15 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, UserSerializer, UsuarioAdminSerializer, UsuarioInternoSerializer
+from .models import RegistroAuditoria
+from .serializers import AccionAuditoriaSerializer, HistorialAccionSerializer, LoginSerializer, UserSerializer
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -90,23 +93,19 @@ class ActuarComoView(APIView):
         return Response(UserSerializer(usuario).data)
 
 
-class UsuarioInternoListCreateView(generics.ListCreateAPIView):
-    queryset = get_user_model().objects.all().order_by("username")
+class HistorialUsuarioView(generics.ListAPIView):
+    serializer_class = HistorialAccionSerializer
 
-    def get_serializer_class(self):
-        return UsuarioAdminSerializer if self.request.method == "GET" else UsuarioInternoSerializer
-
-
-class UsuarioInternoDetailView(generics.RetrieveUpdateAPIView):
-    """Sin destroy: la baja es "desactivar", no borrar (ver UsuarioDesactivarView)."""
-
-    queryset = get_user_model().objects.all()
-    serializer_class = UsuarioInternoSerializer
+    def get_queryset(self):
+        return RegistroAuditoria.objects.filter(usuario_id=self.kwargs["pk"])
 
 
-class UsuarioDesactivarView(APIView):
-    def post(self, request, pk):
-        usuario = get_object_or_404(get_user_model(), pk=pk)
-        usuario.is_active = False
-        usuario.save(update_fields=["is_active"])
-        return Response(UsuarioAdminSerializer(usuario).data)
+class TrazabilidadView(generics.ListAPIView):
+    serializer_class = AccionAuditoriaSerializer
+
+    def get_queryset(self):
+        queryset = RegistroAuditoria.objects.all()
+        tipo_usuario = self.request.query_params.get("rol")
+        if tipo_usuario:
+            queryset = queryset.filter(tipo_usuario=tipo_usuario)
+        return queryset
