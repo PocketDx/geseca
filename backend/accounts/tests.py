@@ -89,6 +89,84 @@ class ActuarComoTests(APITestCase):
         )
 
 
+class UsuarioInternoTests(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="admin", password="smartwash123", rol=User.Rol.ADMINISTRADOR
+        )
+        self.client.login(username="admin", password="smartwash123")
+
+    def test_requiere_sesion_activa(self):
+        self.client.logout()
+        response = self.client.get("/api/usuarios")
+        self.assertEqual(response.status_code, 403)
+
+    def test_crea_un_usuario_interno_con_un_rol(self):
+        response = self.client.post(
+            "/api/usuarios",
+            {
+                "username": "recepcion1",
+                "email": "recepcion1@smartwash.test",
+                "first_name": "Ana",
+                "last_name": "Gomez",
+                "rol": "recepcionista",
+                "password": "smartwash123",
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+        usuario = User.objects.get(username="recepcion1")
+        self.assertEqual(usuario.rol, User.Rol.RECEPCIONISTA)
+        self.assertTrue(usuario.check_password("smartwash123"))
+        self.assertTrue(usuario.is_active)
+
+    def test_crear_sin_password_se_rechaza_y_no_crea_nada(self):
+        response = self.client.post(
+            "/api/usuarios",
+            {"username": "sinclave", "email": "x@smartwash.test", "rol": "operario"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(User.objects.filter(username="sinclave").exists())
+
+    def test_la_lista_incluye_el_estado_activo_de_cada_usuario(self):
+        response = self.client.get("/api/usuarios")
+        self.assertEqual(response.status_code, 200)
+        admin_listado = next(u for u in response.json() if u["username"] == "admin")
+        self.assertIn("is_active", admin_listado)
+        self.assertTrue(admin_listado["is_active"])
+
+    def test_edita_el_rol_de_un_usuario_existente(self):
+        usuario = User.objects.create_user(
+            username="operario1", password="x", rol=User.Rol.OPERARIO
+        )
+        response = self.client.patch(
+            f"/api/usuarios/{usuario.id}", {"rol": "recepcionista"}, content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        usuario.refresh_from_db()
+        self.assertEqual(usuario.rol, User.Rol.RECEPCIONISTA)
+
+    def test_un_usuario_solo_tiene_un_rol_a_la_vez(self):
+        # El campo rol es un CharField unico (no una relacion multiple), asi
+        # que asignar uno nuevo reemplaza al anterior: nunca conviven dos.
+        usuario = User.objects.create_user(
+            username="operario1", password="x", rol=User.Rol.OPERARIO
+        )
+        usuario.rol = User.Rol.RECEPCIONISTA
+        usuario.save()
+        usuario.refresh_from_db()
+        self.assertEqual(usuario.rol, User.Rol.RECEPCIONISTA)
+
+    def test_desactivar_marca_is_active_en_false_sin_borrar_el_usuario(self):
+        usuario = User.objects.create_user(
+            username="operario1", password="x", rol=User.Rol.OPERARIO
+        )
+        response = self.client.post(f"/api/usuarios/{usuario.id}/desactivar")
+        self.assertEqual(response.status_code, 200)
+        usuario.refresh_from_db()
+        self.assertFalse(usuario.is_active)
+        self.assertTrue(User.objects.filter(pk=usuario.id).exists())
+
+
 class AuditoriaTests(APITestCase):
     def setUp(self):
         self.admin = User.objects.create_user(
