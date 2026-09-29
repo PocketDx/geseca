@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/api";
+import { ClayButton } from "./components/ui/clay";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -15,12 +16,8 @@ export default function LogoutButton() {
   }
 
   return (
-    <button
-      type="button"
-      onClick={logout}
-      className="rounded border px-3 py-1.5 text-sm"
-    >
+    <ClayButton type="button" variant="secundario" onClick={logout}>
       Cerrar sesion
-    </button>
+    </ClayButton>
   );
 }

@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     "catalogo",
     "ordenes",
     "fidelizacion",
+    # drf
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -84,7 +86,9 @@ DATABASES = {
 AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -97,6 +101,14 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # drf
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "SMARTWASH",
+    "DESCRIPTION": "Documentación interactiva de los endpoints",
+    "VERSION": "1.0.0",
 }
 
 LANGUAGE_CODE = "es-co"
