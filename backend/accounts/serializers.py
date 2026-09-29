@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import User
+from django.contrib.auth.password_validation import validate_password
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -13,6 +14,7 @@ class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(style={"input_type": "password"})
 
+
 class ActuarComoSerializer(serializers.Serializer):
     username = serializers.CharField()
 
@@ -22,21 +24,44 @@ class UsuarioAdminSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "first_name", "last_name", "rol", "is_active")
+        fields = (
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "rol",
+            "is_active",
+        )
 
 
 class UsuarioInternoSerializer(serializers.ModelSerializer):
     # Obligatoria al crear; opcional al editar (PATCH sin password no la toca).
-    password = serializers.CharField(write_only=True, required=False, style={"input_type": "password"})
+    password = serializers.CharField(
+        write_only=True, required=False, style={"input_type": "password"}
+    )
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "first_name", "last_name", "rol", "is_active", "password")
-        read_only_fields = ("is_active",)  # se cambia solo via el endpoint de desactivar
+        fields = (
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "rol",
+            "is_active",
+            "password",
+        )
+        read_only_fields = (
+            "is_active",
+        )  # se cambia solo via el endpoint de desactivar
 
     def validate(self, attrs):
         if self.instance is None and not attrs.get("password"):
-            raise serializers.ValidationError({"password": "La contraseña es obligatoria al crear un usuario."})
+            raise serializers.ValidationError(
+                {"password": "La contraseña es obligatoria al crear un usuario."}
+            )
         return attrs
 
     def create(self, validated_data):
@@ -50,3 +75,19 @@ class UsuarioInternoSerializer(serializers.ModelSerializer):
             instance.set_password(password)
             instance.save(update_fields=["password"])
         return instance
+
+
+# * serializer de la solicitud e correo
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+# * nueva contraseña
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value

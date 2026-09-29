@@ -10,7 +10,10 @@ class AuthTests(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="recepcion", password="smartwash123", rol=User.Rol.RECEPCIONISTA
+            username="recepcion",
+            email="recepcion@smartwash.test",
+            password="smartwash123",
+            rol=User.Rol.RECEPCIONISTA,
         )
 
     def test_me_requires_authentication(self):
@@ -55,6 +58,7 @@ class AuthTests(APITestCase):
         self.assertEqual(self.client.post("/api/auth/logout").status_code, 204)
         self.assertEqual(self.client.get("/api/auth/me").status_code, 403)
 
+
 class ActuarComoTests(APITestCase):
     def setUp(self):
         User.objects.create_user(
@@ -67,11 +71,11 @@ class ActuarComoTests(APITestCase):
 
     @override_settings(DEBUG=True)
     def test_switches_the_session_to_another_seeded_account(self):
-        response = self.client.post(
-            "/api/auth/actuar-como", {"username": "operario1"}
-        )
+        response = self.client.post("/api/auth/actuar-como", {"username": "operario1"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.client.get("/api/auth/me").json()["username"], "operario1")
+        self.assertEqual(
+            self.client.get("/api/auth/me").json()["username"], "operario1"
+        )
 
     @override_settings(DEBUG=True)
     def test_rejects_a_username_outside_the_seeded_list(self):
@@ -82,7 +86,9 @@ class ActuarComoTests(APITestCase):
     @override_settings(DEBUG=False)
     def test_is_not_available_outside_debug(self):
         self.assertEqual(
-            self.client.post("/api/auth/actuar-como", {"username": "operario1"}).status_code,
+            self.client.post(
+                "/api/auth/actuar-como", {"username": "operario1"}
+            ).status_code,
             404,
         )
 
@@ -137,7 +143,9 @@ class UsuarioInternoTests(APITestCase):
             username="operario1", password="x", rol=User.Rol.OPERARIO
         )
         response = self.client.patch(
-            f"/api/usuarios/{usuario.id}", {"rol": "recepcionista"}, content_type="application/json"
+            f"/api/usuarios/{usuario.id}",
+            {"rol": "recepcionista"},
+            content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
         usuario.refresh_from_db()
