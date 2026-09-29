@@ -13,7 +13,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import RegistroAuditoria
-from .serializers import AccionAuditoriaSerializer, HistorialAccionSerializer, LoginSerializer, UserSerializer
+from .serializers import (
+    AccionAuditoriaSerializer,
+    HistorialAccionSerializer,
+    LoginSerializer,
+    UserSerializer,
+    UsuarioAdminSerializer,
+    UsuarioInternoSerializer,
+)
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -91,6 +98,28 @@ class ActuarComoView(APIView):
         usuario = get_object_or_404(get_user_model(), username=username)
         login(request, usuario)
         return Response(UserSerializer(usuario).data)
+
+
+class UsuarioInternoListCreateView(generics.ListCreateAPIView):
+    queryset = get_user_model().objects.all().order_by("username")
+
+    def get_serializer_class(self):
+        return UsuarioAdminSerializer if self.request.method == "GET" else UsuarioInternoSerializer
+
+
+class UsuarioInternoDetailView(generics.RetrieveUpdateAPIView):
+    """Sin destroy: la baja es "desactivar", no borrar (ver UsuarioDesactivarView)."""
+
+    queryset = get_user_model().objects.all()
+    serializer_class = UsuarioInternoSerializer
+
+
+class UsuarioDesactivarView(APIView):
+    def post(self, request, pk):
+        usuario = get_object_or_404(get_user_model(), pk=pk)
+        usuario.is_active = False
+        usuario.save(update_fields=["is_active"])
+        return Response(UsuarioAdminSerializer(usuario).data)
 
 
 class HistorialUsuarioView(generics.ListAPIView):
