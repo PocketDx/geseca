@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ChangeEvent } from "react";
 
 import { actuarComo, getCuentasDesarrollo, type User } from "@/lib/api";
+import { ClaySelect } from "./ui/clay";
 
 // Solo para desarrollo: se elimina en T8 (SCRUM-57) cuando llegue el control
 // de acceso real por rol. Se oculta solo si el backend responde 404 (produccion).
@@ -25,11 +26,11 @@ export default function ActuarComoSelector() {
   }
 
   return (
-    <select
+    <ClaySelect
       onChange={onChange}
       defaultValue=""
       aria-label="Actuar como"
-      className="rounded border px-2 py-1 text-sm"
+      className="h-9 w-auto text-xs"
     >
       <option value="" disabled>
         Actuar como...
@@ -39,6 +40,6 @@ export default function ActuarComoSelector() {
           {cuenta.username} ({cuenta.rol})
         </option>
       ))}
-    </select>
+    </ClaySelect>
   );
 }
