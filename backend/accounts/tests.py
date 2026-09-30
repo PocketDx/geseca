@@ -1,4 +1,12 @@
+import re
+from datetime import datetime, timedelta
+from unittest import mock
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.core import mail
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from rest_framework.test import APIClient, APITestCase
 from django.test import override_settings
 
@@ -246,3 +254,138 @@ class AuditoriaTests(APITestCase):
         self.assertFalse(admin_site.has_add_permission(None))
         self.assertFalse(admin_site.has_change_permission(None))
         self.assertFalse(admin_site.has_delete_permission(None))
+
+
+@override_settings(FRONTEND_URL="http://front.test")
+class RecuperarPasswordTests(APITestCase):
+    SOLICITAR = "/api/auth/recuperar-password"
+    CONFIRMAR = "/api/auth/recuperar-password/confirmar"
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="ana", email="ana@smartwash.co", password="ClaveVieja#2026"
+        )
+        self.uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        self.token = default_token_generator.make_token(self.user)
+
+    def confirmar(self, **cambios):
+        datos = {"uid": self.uid, "token": self.token, "new_password": "ClaveNueva#2026", **cambios}
+        return self.client.post(self.CONFIRMAR, datos, format="json")
+
+    def assertPasswordSinCambios(self):
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("ClaveVieja#2026"))
+
+    def test_solicitar_con_el_correo_envia_un_enlace_al_frontend(self):
+        response = self.client.post(self.SOLICITAR, {"identificador": "ana@smartwash.co"}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["ana@smartwash.co"])
+        enlace = re.search(
+            r"http://front\.test/recuperar-password/confirmar\?uid=([^&]+)&token=(\S+)",
+            mail.outbox[0].body,
+        )
+        self.assertIsNotNone(enlace)
+        self.assertEqual(enlace.group(1), self.uid)
+
+    def test_solicitar_con_el_nombre_de_usuario_tambien_envia_el_correo(self):
+        self.client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_el_correo_se_reconoce_sin_importar_mayusculas(self):
+        self.client.post(self.SOLICITAR, {"identificador": "ANA@SmartWash.co"}, format="json")
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_una_cuenta_inexistente_recibe_la_misma_respuesta_y_no_se_envia_correo(self):
+        existente = self.client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
+        inexistente = self.client.post(self.SOLICITAR, {"identificador": "nadie@x.co"}, format="json")
+
+        self.assertEqual(inexistente.status_code, existente.status_code)
+        self.assertEqual(inexistente.json(), existente.json())
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_una_cuenta_desactivada_no_recibe_correo(self):
+        self.user.is_active = False
+        self.user.save()
+        response = self.client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_una_cuenta_sin_correo_no_recibe_correo(self):
+        User.objects.create_user(username="sincorreo", password="x")
+        self.client.post(self.SOLICITAR, {"identificador": "sincorreo"}, format="json")
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_si_el_envio_falla_la_respuesta_no_lo_revela_pero_queda_en_el_log(self):
+        with (
+            mock.patch("accounts.views.send_mail", side_effect=OSError("smtp caido")),
+            self.assertLogs("accounts.views", level="ERROR"),
+        ):
+            response = self.client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
+        self.assertEqual(response.status_code, 200)
+
+    def test_solicitar_sin_identificador_se_rechaza(self):
+        response = self.client.post(self.SOLICITAR, {}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("identificador", response.json())
+
+    def test_solicitar_sin_token_csrf_se_rechaza(self):
+        client = APIClient(enforce_csrf_checks=True)
+        response = client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
+        self.assertEqual(response.status_code, 403)
+
+    def test_confirmar_con_un_enlace_valido_cambia_la_contrasena(self):
+        response = self.confirmar()
+
+        self.assertEqual(response.status_code, 200)
+        login = self.client.post(
+            "/api/auth/login", {"username": "ana", "password": "ClaveNueva#2026"}, format="json"
+        )
+        self.assertEqual(login.status_code, 200)
+
+    def test_el_enlace_solo_se_puede_usar_una_vez(self):
+        self.assertEqual(self.confirmar().status_code, 200)
+        self.assertEqual(self.confirmar(new_password="OtraClave#2026").status_code, 400)
+
+    def test_un_token_alterado_se_rechaza(self):
+        response = self.confirmar(token="token-falso")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["non_field_errors"], ["El enlace de recuperación no es válido o expiró."])
+        self.assertPasswordSinCambios()
+
+    def test_un_uid_invalido_se_rechaza(self):
+        self.assertEqual(self.confirmar(uid="no-es-base64!").status_code, 400)
+        self.assertPasswordSinCambios()
+
+    def test_el_token_de_otro_usuario_no_sirve(self):
+        otro = User.objects.create_user(username="beto", email="beto@x.co", password="x")
+        response = self.confirmar(uid=urlsafe_base64_encode(force_bytes(otro.pk)))
+        self.assertEqual(response.status_code, 400)
+
+    def test_un_enlace_de_hace_mas_de_una_hora_expira(self):
+        hace_dos_horas = datetime.now() - timedelta(hours=2)
+        with mock.patch.object(default_token_generator, "_now", return_value=hace_dos_horas):
+            token_viejo = default_token_generator.make_token(self.user)
+
+        self.assertEqual(self.confirmar(token=token_viejo).status_code, 400)
+        self.assertPasswordSinCambios()
+
+    def test_una_cuenta_desactivada_no_puede_confirmar(self):
+        self.user.is_active = False
+        self.user.save()
+        self.assertEqual(self.confirmar().status_code, 400)
+
+    def test_una_contrasena_debil_se_rechaza_con_el_motivo(self):
+        response = self.confirmar(new_password="123")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("new_password", response.json())
+        self.assertPasswordSinCambios()
+
+    def test_confirmar_sin_campos_se_rechaza(self):
+        response = self.client.post(self.CONFIRMAR, {}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(set(response.json()), {"uid", "token", "new_password"})

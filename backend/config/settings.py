@@ -121,6 +121,8 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 PASSWORD_RESET_TIMEOUT = 60 * 60
+# Base de los enlaces que Django envia por correo (apuntan a paginas de Next.js).
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 # * En desarrollo el correo se imprime en la consola de runserver; para enviarlo
 # * de verdad basta con apuntar EMAIL_BACKEND al de SMTP desde el .env.
