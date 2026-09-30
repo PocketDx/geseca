@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "clientes",
     "catalogo",
     "ordenes",
+    "fidelizacion",
     # drf
     "drf_spectacular",
 ]

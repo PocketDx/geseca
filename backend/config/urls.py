@@ -10,7 +10,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # API SCHEMA y Documentacion
     path("api/", include("core.urls")),
-    path("api/auth/", include("accounts.urls")),
+    path("api/", include("accounts.urls")),
+    path("api/fidelizacion/", include("fidelizacion.urls")),
     # Esquema OpenAPI
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     # Documentación interactiva Swagger UI
