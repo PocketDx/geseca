@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { solicitarRecuperacionPassword } from "@/lib/api";
-import { AvisoPendiente, ClayButton, ClayCard, ClayField, ClayInput } from "../components/ui/clay";
+import { AvisoPendiente, ClayButton, ClayCard, ClayField, ClayInput, clayBtnClass } from "../components/ui/clay";
 
 export default function RecuperarPasswordPage() {
   const [enviado, setEnviado] = useState(false);
@@ -52,9 +52,14 @@ export default function RecuperarPasswordPage() {
               <ClayInput name="identificador" autoComplete="username" required />
             </ClayField>
 
-            <ClayButton type="submit" disabled={pending} className="mt-1 w-full">
-              {pending ? "Enviando..." : "Enviar instrucciones"}
-            </ClayButton>
+            <div className="mt-1 flex gap-3">
+              <Link href="/login" className={clayBtnClass("secundario") + " flex-1"}>
+                Cancelar
+              </Link>
+              <ClayButton type="submit" disabled={pending} className="flex-1">
+                {pending ? "Enviando..." : "Enviar instrucciones"}
+              </ClayButton>
+            </div>
           </form>
         )}
 
