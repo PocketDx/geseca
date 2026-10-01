@@ -306,6 +306,16 @@ export async function solicitarRecuperacionPassword(identificador: string): Prom
   });
 }
 
+export async function confirmarRecuperacionPassword(
+  token: string,
+  password: string,
+): Promise<Response> {
+  return api("/auth/confirmar-recuperacion", {
+    method: "POST",
+    body: { token, password },
+  });
+}
+
 /* --------------------------------- Ordenes (staff, EP04/EP05) --------------------------------- */
 
 export type EstadoOrden =
