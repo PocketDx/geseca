@@ -170,6 +170,13 @@ export async function getUsuarios(cookieStore: CookieStore): Promise<UsuarioAdmi
   return fetchBackend<UsuarioAdmin[]>("/usuarios", cookieStore);
 }
 
+export async function getUsuario(
+  id: number,
+  cookieStore: CookieStore,
+): Promise<UsuarioAdmin | null> {
+  return fetchBackend<UsuarioAdmin>(`/usuarios/${id}`, cookieStore);
+}
+
 export async function crearUsuario(datos: UsuarioFormulario): Promise<Response> {
   return api("/usuarios", { method: "POST", body: datos });
 }
@@ -185,9 +192,11 @@ export async function desactivarUsuario(id: number): Promise<Response> {
   return api(`/usuarios/${id}/desactivar`, { method: "POST" });
 }
 
+export type AccionUsuario = "creado" | "editado" | "activado" | "desactivado";
+
 export type HistorialAccion = {
   id: number;
-  accion: string;
+  accion: AccionUsuario;
   detalle: string;
   fecha: string;
 };
