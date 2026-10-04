@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser, getReglasDescuento } from "@/lib/api";
-import { AvisoPendiente, ClayCard } from "../components/ui/clay";
+import { ClayCard } from "../components/ui/clay";
 import ReglaDescuentoForm from "./regla-form";
 import TablaReglas from "./tabla-reglas";
 
@@ -10,6 +10,7 @@ export default async function FidelizacionPage() {
   const cookieStore = await cookies();
   const user = await getCurrentUser(cookieStore);
   if (!user) redirect("/login");
+  if (user.rol !== "administrador") redirect("/");
 
   const reglas = await getReglasDescuento(cookieStore);
 
@@ -28,11 +29,11 @@ export default async function FidelizacionPage() {
       </ClayCard>
 
       {reglas === null ? (
-        <AvisoPendiente>
-          GET /api/fidelizacion/reglas-descuento todavia no existe: la app
-          fidelizacion (EP08) no se ha creado. Esta pantalla ya esta lista
-          para listar en cuanto exista.
-        </AvisoPendiente>
+        <ClayCard>
+          <p className="text-sm text-(--sw-ink-soft)">
+            No se pudieron cargar las reglas. Verifica que el backend este en ejecucion.
+          </p>
+        </ClayCard>
       ) : (
         <TablaReglas reglas={reglas} />
       )}

@@ -61,6 +61,21 @@ export async function api(
   });
 }
 
+/** Errores de validacion de DRF por campo. `detail` llega en 403/404 y similares;
+ * una respuesta que no es JSON (p. ej. un 500 con HTML) devuelve un objeto vacio. */
+export type ErroresApi = Record<string, string[]>;
+
+export async function leerErroresApi(response: Response): Promise<ErroresApi> {
+  const data: unknown = await response.json().catch(() => null);
+  if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+  return Object.fromEntries(
+    Object.entries(data).map(([campo, valor]) => [
+      campo,
+      Array.isArray(valor) ? valor.map(String) : [String(valor)],
+    ]),
+  );
+}
+
 /** Usuario autenticado leido desde un Server Component, o null si no hay sesion.
  *
  * Devuelve null tambien si el backend no responde. Sin esto, un Django caido
