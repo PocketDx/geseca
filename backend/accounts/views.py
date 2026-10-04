@@ -5,25 +5,36 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema  # <-- Importamos extend_schema
 
-from .serializers import LoginSerializer, UserSerializer
+from .models import RegistroAuditoria
+from .serializers import (
+    AccionAuditoriaSerializer,
+    HistorialAccionSerializer,
+    LoginSerializer,
+    UserSerializer,
+    UsuarioAdminSerializer,
+    UsuarioInternoSerializer,
+)
 
 
 @method_decorator(csrf_protect, name="dispatch")
 class LoginView(APIView):
-    """Crea la sesion de Django. El navegador recibe la cookie de sesion.
-
-    APIView es csrf_exempt por defecto y DRF solo exige CSRF a peticiones ya
-    autenticadas, por eso el login se protege explicitamente (login CSRF).
-    """
+    #! Crea la sesion de Django. El navegador recibe la cookie de sesion.
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=LoginSerializer,
+        responses={200: UserSerializer, 401: dict},
+        summary="Iniciar sesión",
+    )
     def post(self, request):
         data = LoginSerializer(data=request.data)
         data.is_valid(raise_exception=True)
@@ -38,6 +49,11 @@ class LoginView(APIView):
 
 
 class LogoutView(APIView):
+    @extend_schema(
+        request=None,
+        responses={204: None},
+        summary="Cerrar sesión",
+    )
     def post(self, request):
         logout(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -50,6 +66,10 @@ class MeView(APIView):
     Ademas siembra la cookie csrftoken, que el frontend necesita antes del login.
     """
 
+    @extend_schema(
+        responses={200: UserSerializer},
+        summary="Obtener usuario actual",
+    )
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 
@@ -89,3 +109,43 @@ class ActuarComoView(APIView):
         usuario = get_object_or_404(get_user_model(), username=username)
         login(request, usuario)
         return Response(UserSerializer(usuario).data)
+
+
+class UsuarioInternoListCreateView(generics.ListCreateAPIView):
+    queryset = get_user_model().objects.all().order_by("username")
+
+    def get_serializer_class(self):
+        return UsuarioAdminSerializer if self.request.method == "GET" else UsuarioInternoSerializer
+
+
+class UsuarioInternoDetailView(generics.RetrieveUpdateAPIView):
+    """Sin destroy: la baja es "desactivar", no borrar (ver UsuarioDesactivarView)."""
+
+    queryset = get_user_model().objects.all()
+    serializer_class = UsuarioInternoSerializer
+
+
+class UsuarioDesactivarView(APIView):
+    def post(self, request, pk):
+        usuario = get_object_or_404(get_user_model(), pk=pk)
+        usuario.is_active = False
+        usuario.save(update_fields=["is_active"])
+        return Response(UsuarioAdminSerializer(usuario).data)
+
+
+class HistorialUsuarioView(generics.ListAPIView):
+    serializer_class = HistorialAccionSerializer
+
+    def get_queryset(self):
+        return RegistroAuditoria.objects.filter(usuario_id=self.kwargs["pk"])
+
+
+class TrazabilidadView(generics.ListAPIView):
+    serializer_class = AccionAuditoriaSerializer
+
+    def get_queryset(self):
+        queryset = RegistroAuditoria.objects.all()
+        tipo_usuario = self.request.query_params.get("rol")
+        if tipo_usuario:
+            queryset = queryset.filter(tipo_usuario=tipo_usuario)
+        return queryset

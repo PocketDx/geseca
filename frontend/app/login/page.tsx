@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { api } from "@/lib/api";
+import { ClayButton, ClayCard, ClayField, ClayInput } from "../components/ui/clay";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,45 +49,47 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-8">
-      <h1 className="mb-6 text-2xl font-semibold">SmartWash</h1>
+    <main className="mx-auto flex min-h-[calc(100vh-64px)] max-w-sm flex-col justify-center p-4 sm:p-8">
+      <ClayCard>
+        <h1 className="text-2xl font-extrabold tracking-tight text-(--sw-ink)">
+          Smart<span className="text-[#5b8fb0]">Wash</span>
+        </h1>
+        <p className="mt-1 text-sm text-(--sw-ink-soft)">
+          Ingresa con tu usuario y contrasena.
+        </p>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Usuario
-          <input
-            name="username"
-            autoComplete="username"
-            required
-            className="rounded border px-3 py-2"
-          />
-        </label>
+        <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
+          <ClayField label="Usuario">
+            <ClayInput name="username" autoComplete="username" required />
+          </ClayField>
 
-        <label className="flex flex-col gap-1 text-sm">
-          Contrasena
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            className="rounded border px-3 py-2"
-          />
-        </label>
+          <ClayField label="Contrasena">
+            <ClayInput
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
+          </ClayField>
 
-        {error && (
-          <p role="alert" className="text-sm text-red-600">
-            {error}
-          </p>
-        )}
+          {error && (
+            <p role="alert" className="text-sm font-medium text-red-600">
+              {error}
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded border px-3 py-2 disabled:opacity-50"
+          <ClayButton type="submit" disabled={pending} className="mt-2 w-full">
+            {pending ? "Ingresando..." : "Iniciar sesion"}
+          </ClayButton>
+        </form>
+
+        <Link
+          href="/recuperar-password"
+          className="mt-5 block text-center text-xs font-semibold text-(--sw-ink-soft) hover:text-(--sw-ink) hover:underline"
         >
-          {pending ? "Ingresando..." : "Iniciar sesion"}
-        </button>
-      </form>
+          Olvidaste tu contrasena?
+        </Link>
+      </ClayCard>
     </main>
   );
 }
