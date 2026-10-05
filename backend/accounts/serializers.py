@@ -68,6 +68,15 @@ class UsuarioAdminSerializer(serializers.ModelSerializer):
         fields = ("id", "username", "email", "first_name", "last_name", "rol", "is_active")
 
 
+MENSAJE_ULTIMO_ADMIN = "Debe quedar al menos un administrador activo."
+
+
+def es_ultimo_admin_activo(usuario):
+    # ponytail: sin bloqueo de filas; dos bajas simultaneas de los dos ultimos admins pasarian.
+    activos = User.objects.filter(rol=User.Rol.ADMINISTRADOR, is_active=True)
+    return usuario.rol == User.Rol.ADMINISTRADOR and usuario.is_active and not activos.exclude(pk=usuario.pk).exists()
+
+
 class UsuarioInternoSerializer(serializers.ModelSerializer):
     # Obligatoria al crear; opcional al editar (PATCH sin password no la toca).
     password = serializers.CharField(write_only=True, required=False, style={"input_type": "password"})
@@ -78,21 +87,37 @@ class UsuarioInternoSerializer(serializers.ModelSerializer):
         read_only_fields = ("is_active",)  # se cambia solo via el endpoint de desactivar
 
     def validate(self, attrs):
-        if self.instance is None and not attrs.get("password"):
+        password = attrs.get("password")
+        if self.instance is None and not password:
             raise serializers.ValidationError({"password": "La contraseña es obligatoria al crear un usuario."})
+        if password:
+            datos = {campo: valor for campo, valor in attrs.items() if campo != "password"}
+            try:
+                validate_password(password, user=self.instance or User(**datos))
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError({"password": list(exc.messages)})
+
+        rol = attrs.get("rol")
+        if rol and rol != User.Rol.ADMINISTRADOR and self.instance and es_ultimo_admin_activo(self.instance):
+            raise serializers.ValidationError({"rol": MENSAJE_ULTIMO_ADMIN})
         return attrs
 
     def create(self, validated_data):
         password = validated_data.pop("password")
-        return User.objects.create_user(password=password, **validated_data)
+        validated_data["username"] = User.normalize_username(validated_data["username"])
+        validated_data["email"] = User.objects.normalize_email(validated_data.get("email", ""))
+        usuario = User(**validated_data)
+        usuario.set_password(password)
+        usuario._realizado_por = self.context["request"].user
+        usuario.save()
+        return usuario
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
-        instance = super().update(instance, validated_data)
         if password:
             instance.set_password(password)
-            instance.save(update_fields=["password"])
-        return instance
+        instance._realizado_por = self.context["request"].user
+        return super().update(instance, validated_data)
 
 
 class HistorialAccionSerializer(serializers.ModelSerializer):

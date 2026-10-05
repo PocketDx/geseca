@@ -207,7 +207,7 @@ export async function desactivarUsuario(id: number): Promise<Response> {
   return api(`/usuarios/${id}/desactivar`, { method: "POST" });
 }
 
-export type AccionUsuario = "creado" | "editado" | "activado" | "desactivado";
+export type AccionUsuario = "creado" | "editado" | "activado" | "desactivado" | "inicio_sesion";
 
 export type HistorialAccion = {
   id: number;

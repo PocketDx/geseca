@@ -43,6 +43,7 @@ class RegistroAuditoria(models.Model):
         EDITADO = "editado", "Editado"
         ACTIVADO = "activado", "Activado"
         DESACTIVADO = "desactivado", "Desactivado"
+        INICIO_SESION = "inicio_sesion", "Inicio de sesión"
 
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,

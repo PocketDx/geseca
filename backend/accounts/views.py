@@ -17,12 +17,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.throttling import ScopedRateThrottle, SimpleRateThrottle
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema  # <-- Importamos extend_schema
 
 from .models import RegistroAuditoria
 from .serializers import (
+    MENSAJE_ULTIMO_ADMIN,
     AccionAuditoriaSerializer,
     HistorialAccionSerializer,
     LoginSerializer,
@@ -31,6 +32,7 @@ from .serializers import (
     UserSerializer,
     UsuarioAdminSerializer,
     UsuarioInternoSerializer,
+    es_ultimo_admin_activo,
 )
 
 
@@ -91,6 +93,19 @@ MENSAJE_RECUPERACION = (
 )
 
 
+class RecuperarPasswordPorCuentaThrottle(SimpleRateThrottle):
+    """Limita por cuenta pedida y no por IP, que el cliente puede falsear con
+    X-Forwarded-For. Asi nadie llena de correos la bandeja de otra persona."""
+
+    scope = "recuperar-password-cuenta"
+
+    def get_cache_key(self, request, view):
+        identificador = str(request.data.get("identificador", "")).strip().lower()
+        if not identificador:
+            return None
+        return self.cache_format % {"scope": self.scope, "ident": identificador}
+
+
 @method_decorator(csrf_protect, name="dispatch")
 class RecuperarPasswordView(APIView):
     """Envia el enlace de recuperacion al correo de la cuenta.
@@ -100,7 +115,7 @@ class RecuperarPasswordView(APIView):
     """
 
     permission_classes = [AllowAny]
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [ScopedRateThrottle, RecuperarPasswordPorCuentaThrottle]
     throttle_scope = "recuperar-password"
 
     @extend_schema(
@@ -223,7 +238,10 @@ class UsuarioInternoDetailView(generics.RetrieveUpdateAPIView):
 class UsuarioDesactivarView(APIView):
     def post(self, request, pk):
         usuario = get_object_or_404(get_user_model(), pk=pk)
+        if es_ultimo_admin_activo(usuario):
+            return Response({"detail": MENSAJE_ULTIMO_ADMIN}, status=status.HTTP_400_BAD_REQUEST)
         usuario.is_active = False
+        usuario._realizado_por = request.user
         usuario.save(update_fields=["is_active"])
         return Response(UsuarioAdminSerializer(usuario).data)
 

@@ -28,6 +28,7 @@ const ACCIONES: Record<AccionUsuario, { etiqueta: string; color: "blue" | "mint"
   editado: { etiqueta: "Editado", color: "lavender" },
   activado: { etiqueta: "Activado", color: "mint" },
   desactivado: { etiqueta: "Desactivado", color: "peach" },
+  inicio_sesion: { etiqueta: "Inicio de sesion", color: "blue" },
 };
 
 function fechaValida(valor?: string): string | undefined {

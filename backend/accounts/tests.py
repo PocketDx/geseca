@@ -119,13 +119,13 @@ class UsuarioInternoTests(APITestCase):
                 "first_name": "Ana",
                 "last_name": "Gomez",
                 "rol": "recepcionista",
-                "password": "smartwash123",
+                "password": "Lavanderia#2026",
             },
         )
         self.assertEqual(response.status_code, 201)
         usuario = User.objects.get(username="recepcion1")
         self.assertEqual(usuario.rol, User.Rol.RECEPCIONISTA)
-        self.assertTrue(usuario.check_password("smartwash123"))
+        self.assertTrue(usuario.check_password("Lavanderia#2026"))
         self.assertTrue(usuario.is_active)
 
     def test_crear_sin_password_se_rechaza_y_no_crea_nada(self):
@@ -175,6 +175,33 @@ class UsuarioInternoTests(APITestCase):
         self.assertFalse(usuario.is_active)
         self.assertTrue(User.objects.filter(pk=usuario.id).exists())
 
+    def test_crear_con_una_contrasena_debil_se_rechaza_con_el_motivo(self):
+        response = self.client.post(
+            "/api/usuarios",
+            {"username": "recepcion1", "rol": "recepcionista", "password": "12345678"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("password", response.json())
+        self.assertFalse(User.objects.filter(username="recepcion1").exists())
+
+    def test_no_se_puede_desactivar_al_ultimo_administrador_activo(self):
+        response = self.client.post(f"/api/usuarios/{self.admin.id}/desactivar")
+        self.assertEqual(response.status_code, 400)
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.is_active)
+
+    def test_no_se_puede_quitar_el_rol_al_ultimo_administrador_activo(self):
+        response = self.client.patch(
+            f"/api/usuarios/{self.admin.id}", {"rol": "operario"}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("rol", response.json())
+
+    def test_con_otro_administrador_activo_si_se_puede_desactivar(self):
+        otro = User.objects.create_user(username="admin2", password="x", rol=User.Rol.ADMINISTRADOR)
+        response = self.client.post(f"/api/usuarios/{otro.id}/desactivar")
+        self.assertEqual(response.status_code, 200)
+
 
 class AuditoriaTests(APITestCase):
     def setUp(self):
@@ -211,6 +238,30 @@ class AuditoriaTests(APITestCase):
         usuario.save()
         ultimo = RegistroAuditoria.objects.filter(usuario=usuario).latest("fecha")
         self.assertEqual(ultimo.accion, RegistroAuditoria.Accion.EDITADO)
+
+    def test_iniciar_sesion_registra_un_inicio_de_sesion_y_no_una_edicion(self):
+        usuario = User.objects.create_user(username="operario1", password="x", rol=User.Rol.OPERARIO)
+        self.client.post("/api/auth/login", {"username": "operario1", "password": "x"}, format="json")
+        acciones = list(RegistroAuditoria.objects.filter(usuario=usuario).values_list("accion", flat=True))
+        self.assertEqual(acciones, ["inicio_sesion", "creado"])
+
+    def test_editar_desde_el_api_registra_que_cambio_y_quien_lo_hizo(self):
+        usuario = User.objects.create_user(username="operario1", password="x", rol=User.Rol.OPERARIO)
+        self.client.patch(
+            f"/api/usuarios/{usuario.id}",
+            {"rol": "recepcionista", "first_name": "Ana"},
+            format="json",
+        )
+        ultimo = RegistroAuditoria.objects.filter(usuario=usuario).latest("fecha")
+        self.assertEqual(ultimo.accion, RegistroAuditoria.Accion.EDITADO)
+        self.assertEqual(ultimo.detalle, "nombre · rol: operario → recepcionista · por admin")
+
+    def test_desactivar_desde_el_api_registra_quien_lo_hizo(self):
+        usuario = User.objects.create_user(username="operario1", password="x", rol=User.Rol.OPERARIO)
+        self.client.post(f"/api/usuarios/{usuario.id}/desactivar")
+        ultimo = RegistroAuditoria.objects.filter(usuario=usuario).latest("fecha")
+        self.assertEqual(ultimo.accion, RegistroAuditoria.Accion.DESACTIVADO)
+        self.assertEqual(ultimo.detalle, "por admin")
 
     def test_el_historial_de_un_usuario_devuelve_solo_sus_propias_acciones(self):
         usuario = User.objects.create_user(username="operario1", password="x", rol=User.Rol.OPERARIO)
@@ -333,12 +384,24 @@ class RecuperarPasswordTests(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("identificador", response.json())
 
-    def test_limita_las_solicitudes_repetidas(self):
-        for _ in range(5):
-            self.client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
+    def test_limita_las_solicitudes_repetidas_desde_la_misma_ip(self):
+        for numero in range(5):
+            self.client.post(self.SOLICITAR, {"identificador": f"nadie{numero}"}, format="json")
         response = self.client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
         self.assertEqual(response.status_code, 429)
-        self.assertEqual(len(mail.outbox), 5)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_limita_las_solicitudes_por_cuenta_aunque_cambie_la_ip(self):
+        for numero in range(3):
+            self.client.post(
+                self.SOLICITAR, {"identificador": "ana"}, format="json",
+                HTTP_X_FORWARDED_FOR=f"10.0.0.{numero}",
+            )
+        response = self.client.post(
+            self.SOLICITAR, {"identificador": "ANA"}, format="json", HTTP_X_FORWARDED_FOR="10.0.0.9"
+        )
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(len(mail.outbox), 3)
 
     def test_solicitar_sin_token_csrf_se_rechaza(self):
         client = APIClient(enforce_csrf_checks=True)
