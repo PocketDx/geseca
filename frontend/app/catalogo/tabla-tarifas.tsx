@@ -3,16 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { actualizarTarifa, type Tarifa } from "@/lib/api";
+import { actualizarTarifa, type Tarifa, type UnidadCobro } from "@/lib/api";
 import { formatCOP, formatFecha } from "@/lib/format";
-import { ClayBadge, ClayButton, ClayCard, ClayInput } from "../components/ui/clay";
+import { ClayBadge, ClayButton, ClayCard, ClayInput, ClaySelect } from "../components/ui/clay";
 import { AlertaErrores, mensajesDeError } from "./errores";
 import { ETIQUETAS_TARIFA } from "./tarifa-form";
 
-export default function TablaTarifas({ tarifas }: { tarifas: Tarifa[] }) {
+const ETIQUETA_UNIDAD: Record<UnidadCobro, string> = { kilo: "Por kilo", prenda: "Por prenda" };
+
+export default function TablaTarifas({ tarifas, editable }: { tarifas: Tarifa[]; editable: boolean }) {
   const router = useRouter();
   const [editando, setEditando] = useState<Tarifa | null>(null);
   const [valor, setValor] = useState("");
+  const [unidad, setUnidad] = useState<UnidadCobro>("kilo");
   const [plazo, setPlazo] = useState("");
   const [hasta, setHasta] = useState("");
   const [errores, setErrores] = useState<string[]>([]);
@@ -29,6 +32,7 @@ export default function TablaTarifas({ tarifas }: { tarifas: Tarifa[] }) {
   function empezarEdicion(tarifa: Tarifa) {
     setEditando(tarifa);
     setValor(tarifa.valor);
+    setUnidad(tarifa.unidad_cobro);
     setPlazo(String(tarifa.plazo_entrega_dias));
     setHasta(tarifa.vigente_hasta ?? "");
     setErrores([]);
@@ -45,6 +49,7 @@ export default function TablaTarifas({ tarifas }: { tarifas: Tarifa[] }) {
     setErrores([]);
     const response = await actualizarTarifa(editando.id, {
       valor,
+      unidad_cobro: unidad,
       plazo_entrega_dias: Number(plazo),
       vigente_hasta: hasta === "" ? null : hasta,
     }).catch(() => null);
@@ -66,11 +71,14 @@ export default function TablaTarifas({ tarifas }: { tarifas: Tarifa[] }) {
             <th className="px-5 py-3">Prenda</th>
             <th className="px-5 py-3">Servicio</th>
             <th className="px-5 py-3">Valor</th>
+            <th className="px-5 py-3">Unidad</th>
             <th className="px-5 py-3">Plazo</th>
             <th className="px-5 py-3">Vigencia</th>
-            <th className="px-5 py-3">
-              <span className="sr-only">Acciones</span>
-            </th>
+            {editable && (
+              <th className="px-5 py-3">
+                <span className="sr-only">Acciones</span>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -83,13 +91,16 @@ export default function TablaTarifas({ tarifas }: { tarifas: Tarifa[] }) {
                 prenda={tarifa.tipo_prenda_nombre}
                 servicio={tarifa.servicio_nombre}
                 enEdicion={enEdicion}
+                editable={editable}
                 deshabilitado={editando !== null && !enEdicion}
                 valor={valor}
+                unidad={unidad}
                 plazo={plazo}
                 hasta={hasta}
                 pending={pending}
                 errores={enEdicion ? errores : []}
                 onValor={setValor}
+                onUnidad={setUnidad}
                 onPlazo={setPlazo}
                 onHasta={setHasta}
                 onEditar={() => empezarEdicion(tarifa)}
@@ -109,13 +120,16 @@ function FilaTarifa({
   prenda,
   servicio,
   enEdicion,
+  editable,
   deshabilitado,
   valor,
+  unidad,
   plazo,
   hasta,
   pending,
   errores,
   onValor,
+  onUnidad,
   onPlazo,
   onHasta,
   onEditar,
@@ -126,13 +140,16 @@ function FilaTarifa({
   prenda: string;
   servicio: string;
   enEdicion: boolean;
+  editable: boolean;
   deshabilitado: boolean;
   valor: string;
+  unidad: UnidadCobro;
   plazo: string;
   hasta: string;
   pending: boolean;
   errores: string[];
   onValor: (valor: string) => void;
+  onUnidad: (unidad: UnidadCobro) => void;
   onPlazo: (plazo: string) => void;
   onHasta: (hasta: string) => void;
   onEditar: () => void;
@@ -157,6 +174,17 @@ function FilaTarifa({
                 className="min-w-24"
                 required
               />
+            </td>
+            <td data-label="Unidad" className="px-5 py-3">
+              <ClaySelect
+                aria-label="Unidad de cobro"
+                value={unidad}
+                onChange={(event) => onUnidad(event.target.value === "prenda" ? "prenda" : "kilo")}
+                className="min-w-28"
+              >
+                <option value="kilo">Por kilo</option>
+                <option value="prenda">Por prenda</option>
+              </ClaySelect>
             </td>
             <td data-label="Plazo" className="px-5 py-3">
               <ClayInput
@@ -194,23 +222,28 @@ function FilaTarifa({
             <td data-label="Valor" className="px-5 py-3 font-semibold text-(--sw-ink) tabular-nums">
               {formatCOP(tarifa.valor)}
             </td>
+            <td data-label="Unidad" className="px-5 py-3 text-(--sw-ink-soft)">
+              {ETIQUETA_UNIDAD[tarifa.unidad_cobro]}
+            </td>
             <td data-label="Plazo" className="px-5 py-3 text-(--sw-ink-soft)">{tarifa.plazo_entrega_dias} dias</td>
             <td data-label="Vigencia" className="px-5 py-3">
               <ClayBadge color={tarifa.vigente_hasta ? "peach" : "mint"}>
                 {tarifa.vigente_hasta ? `Hasta ${formatFecha(tarifa.vigente_hasta)}` : "Vigente"}
               </ClayBadge>
             </td>
-            <td className="px-5 py-3">
-              <ClayButton type="button" variant="secundario" onClick={onEditar} disabled={deshabilitado}>
-                Editar
-              </ClayButton>
-            </td>
+            {editable && (
+              <td className="px-5 py-3">
+                <ClayButton type="button" variant="secundario" onClick={onEditar} disabled={deshabilitado}>
+                  Editar
+                </ClayButton>
+              </td>
+            )}
           </>
         )}
       </tr>
       {errores.length > 0 && (
         <tr>
-          <td colSpan={6} className="px-5 pb-3">
+          <td colSpan={7} className="px-5 pb-3">
             <AlertaErrores titulo="No se pudo actualizar la tarifa" errores={errores} />
           </td>
         </tr>

@@ -28,6 +28,7 @@ export default async function CatalogoPage({
   const cookieStore = await cookies();
   const user = await getCurrentUser(cookieStore);
   if (!user) redirect("/login");
+  const puedeEditar = user.rol === "administrador";
 
   const soloVigentes = (await searchParams).vigentes === "1";
   const [tiposPrenda, servicios, tarifas] = await Promise.all([
@@ -39,45 +40,53 @@ export default async function CatalogoPage({
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8 sm:py-12">
       <Encabezado eyebrow="Administracion · EP03" titulo="Catalogo">
-        Administra servicios y sus tarifas por tipo de prenda (HU07).
+        {puedeEditar
+          ? "Administra servicios y sus tarifas por tipo de prenda (HU07)."
+          : "Consulta los servicios y sus tarifas por tipo de prenda (HU07)."}
       </Encabezado>
 
-      <ClayCard className="mb-4">
-        <h2 className="sw-eyebrow">Nuevo tipo de prenda</h2>
-        <TipoPrendaForm className="mt-4" />
-      </ClayCard>
+      {puedeEditar && (
+        <ClayCard className="mb-4">
+          <h2 className="sw-eyebrow">Nuevo tipo de prenda</h2>
+          <TipoPrendaForm className="mt-4" />
+        </ClayCard>
+      )}
       <div className="mb-6">
         {tiposPrenda === null ? (
           <ErrorDeCarga recurso="los tipos de prenda" />
         ) : (
-          <TablaTiposPrenda tiposPrenda={tiposPrenda} />
+          <TablaTiposPrenda tiposPrenda={tiposPrenda} editable={puedeEditar} />
         )}
       </div>
 
-      <ClayCard className="mb-4">
-        <h2 className="sw-eyebrow">Nuevo servicio</h2>
-        <ServicioForm className="mt-4" />
-      </ClayCard>
+      {puedeEditar && (
+        <ClayCard className="mb-4">
+          <h2 className="sw-eyebrow">Nuevo servicio</h2>
+          <ServicioForm className="mt-4" />
+        </ClayCard>
+      )}
       <div className="mb-6">
         {servicios === null ? (
           <ErrorDeCarga recurso="los servicios" />
         ) : (
-          <TablaServicios servicios={servicios} />
+          <TablaServicios servicios={servicios} editable={puedeEditar} />
         )}
       </div>
 
-      <ClayCard className="mb-6">
-        <h2 className="sw-eyebrow">Nueva tarifa</h2>
-        <div className="mt-4">
-          <TarifaForm tiposPrenda={tiposPrenda ?? []} servicios={servicios ?? []} />
-        </div>
-      </ClayCard>
+      {puedeEditar && (
+        <ClayCard className="mb-6">
+          <h2 className="sw-eyebrow">Nueva tarifa</h2>
+          <div className="mt-4">
+            <TarifaForm tiposPrenda={tiposPrenda ?? []} servicios={servicios ?? []} />
+          </div>
+        </ClayCard>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="sw-eyebrow">Tarifas</h2>
         <FiltroVigencia soloVigentes={soloVigentes} />
       </div>
-      {tarifas === null ? <ErrorDeCarga recurso="las tarifas" /> : <TablaTarifas tarifas={tarifas} />}
+      {tarifas === null ? <ErrorDeCarga recurso="las tarifas" /> : <TablaTarifas tarifas={tarifas} editable={puedeEditar} />}
     </main>
   );
 }

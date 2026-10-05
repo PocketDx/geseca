@@ -247,6 +247,8 @@ export async function getTrazabilidad(
 
 export type TipoPrenda = { id: number; nombre: string; material: string };
 export type Servicio = { id: number; nombre: string; descripcion: string };
+export type UnidadCobro = "kilo" | "prenda";
+
 export type Tarifa = {
   id: number;
   tipo_prenda: number;
@@ -254,6 +256,7 @@ export type Tarifa = {
   servicio: number;
   servicio_nombre: string;
   valor: string;
+  unidad_cobro: UnidadCobro;
   plazo_entrega_dias: number;
   vigente_desde: string;
   vigente_hasta: string | null;

@@ -11,11 +11,13 @@ type Columna = { titulo: string; valor: string };
 
 function TablaEditable<T extends { id: number }>({
   filas,
+  editable,
   vacio,
   columnas,
   formulario,
 }: {
   filas: T[];
+  editable: boolean;
   vacio: string;
   columnas: (fila: T) => Columna[];
   formulario: (fila: T, terminar: () => void) => ReactNode;
@@ -40,9 +42,11 @@ function TablaEditable<T extends { id: number }>({
                 {columna.titulo}
               </th>
             ))}
-            <th className="px-5 py-3">
-              <span className="sr-only">Acciones</span>
-            </th>
+            {editable && (
+              <th className="px-5 py-3">
+                <span className="sr-only">Acciones</span>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -64,16 +68,18 @@ function TablaEditable<T extends { id: number }>({
                       {celda.valor || "—"}
                     </td>
                   ))}
-                  <td className="px-5 py-3 text-right">
-                    <ClayButton
-                      type="button"
-                      variant="secundario"
-                      disabled={editandoId === fila.id}
-                      onClick={() => setEditandoId(fila.id)}
-                    >
-                      Editar
-                    </ClayButton>
-                  </td>
+                  {editable && (
+                    <td className="px-5 py-3 text-right">
+                      <ClayButton
+                        type="button"
+                        variant="secundario"
+                        disabled={editandoId === fila.id}
+                        onClick={() => setEditandoId(fila.id)}
+                      >
+                        Editar
+                      </ClayButton>
+                    </td>
+                  )}
                 </tr>
                 {editandoId === fila.id && (
                   <tr className="bg-(--sw-bg-deep)/30">
@@ -91,10 +97,11 @@ function TablaEditable<T extends { id: number }>({
   );
 }
 
-export function TablaTiposPrenda({ tiposPrenda }: { tiposPrenda: TipoPrenda[] }) {
+export function TablaTiposPrenda({ tiposPrenda, editable }: { tiposPrenda: TipoPrenda[]; editable: boolean }) {
   return (
     <TablaEditable
       filas={tiposPrenda}
+      editable={editable}
       vacio="Todavia no hay tipos de prenda."
       columnas={(tipo) => [
         { titulo: "Tipo de prenda", valor: tipo.nombre },
@@ -105,10 +112,11 @@ export function TablaTiposPrenda({ tiposPrenda }: { tiposPrenda: TipoPrenda[] })
   );
 }
 
-export function TablaServicios({ servicios }: { servicios: Servicio[] }) {
+export function TablaServicios({ servicios, editable }: { servicios: Servicio[]; editable: boolean }) {
   return (
     <TablaEditable
       filas={servicios}
+      editable={editable}
       vacio="Todavia no hay servicios."
       columnas={(servicio) => [
         { titulo: "Servicio", valor: servicio.nombre },
