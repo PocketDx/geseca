@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { solicitarRecuperacionPassword } from "@/lib/api";
-import { AvisoPendiente, ClayButton, ClayCard, ClayField, ClayInput, clayBtnClass } from "../components/ui/clay";
+import { ClayButton, ClayCard, ClayField, ClayInput, clayBtnClass } from "../components/ui/clay";
 
 export default function RecuperarPasswordPage() {
   const [enviado, setEnviado] = useState(false);
-  const [pendiente, setPendiente] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
     setPending(true);
 
     const form = new FormData(event.currentTarget);
@@ -21,14 +22,12 @@ export default function RecuperarPasswordPage() {
     const response = await solicitarRecuperacionPassword(identificador).catch(() => null);
     setPending(false);
 
-    // HU02 (SCRUM): falta el backend de correo (ver plot.md, "Pendiente").
-    // /api/auth/recuperar-password todavia no existe, asi que cualquier
-    // respuesta que no sea 2xx se trata igual: la pantalla esta lista, el
-    // envio real llega cuando exista el endpoint.
     if (response?.ok) {
       setEnviado(true);
+    } else if (response?.status === 429) {
+      setError("Demasiadas solicitudes. Espera un momento antes de intentarlo de nuevo.");
     } else {
-      setPendiente(true);
+      setError("No se pudo enviar la solicitud. Intenta de nuevo.");
     }
   }
 
@@ -63,14 +62,10 @@ export default function RecuperarPasswordPage() {
           </form>
         )}
 
-        {pendiente && (
-          <div className="mt-5">
-            <AvisoPendiente>
-              La recuperacion por correo (HU02) todavia no tiene backend de email
-              conectado. Este formulario ya esta listo: en cuanto exista
-              POST /api/auth/recuperar-password, empieza a funcionar sin cambios aqui.
-            </AvisoPendiente>
-          </div>
+        {error && (
+          <p role="alert" className="mt-5 text-sm font-medium text-red-600">
+            {error}
+          </p>
         )}
 
         <Link

@@ -103,6 +103,7 @@ REST_FRAMEWORK = {
     ],
     # drf
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_RATES": {"recuperar-password": "5/hour"},
 }
 
 SPECTACULAR_SETTINGS = {
@@ -119,6 +120,24 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+PASSWORD_RESET_TIMEOUT = 60 * 60
+# Base de los enlaces que Django envia por correo (apuntan a paginas de Next.js).
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+
+# * En desarrollo el correo se imprime en la consola de runserver; para enviarlo
+# * de verdad basta con apuntar EMAIL_BACKEND al de SMTP desde el .env.
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", "SmartWash <no-reply@smartwash.local>"
+)
 
 # En produccion el frontend y el backend viven en dominios distintos.
 SESSION_COOKIE_SECURE = not DEBUG
