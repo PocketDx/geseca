@@ -2,9 +2,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser, getServicios, getTarifas, getTiposPrenda } from "@/lib/api";
-import { AvisoPendiente, ClayCard } from "../components/ui/clay";
+import { ClayCard } from "../components/ui/clay";
 import ServicioForm from "./servicio-form";
 import TarifaForm from "./tarifa-form";
+import TipoPrendaForm from "./tipo-prenda-form";
 import TablaTarifas from "./tabla-tarifas";
 
 export default async function CatalogoPage() {
@@ -28,6 +29,11 @@ export default async function CatalogoPage() {
       </header>
 
       <ClayCard className="mb-6">
+        <h2 className="text-sm font-bold text-(--sw-ink)">Nuevo tipo de prenda</h2>
+        <TipoPrendaForm className="mt-4" />
+      </ClayCard>
+
+      <ClayCard className="mb-6">
         <h2 className="text-sm font-bold text-(--sw-ink)">Nuevo servicio</h2>
         <ServicioForm className="mt-4" />
       </ClayCard>
@@ -40,11 +46,11 @@ export default async function CatalogoPage() {
       </ClayCard>
 
       {tarifas === null ? (
-        <AvisoPendiente>
-          GET /api/catalogo/tarifas (y /servicios, /tipos-prenda) todavia no
-          existen: catalogo solo tiene los modelos. Esta pantalla ya esta
-          lista para listar en cuanto se agreguen los endpoints.
-        </AvisoPendiente>
+        <ClayCard>
+          <p className="text-sm text-(--sw-ink-soft)">
+            No se pudieron cargar las tarifas. Verifica que el backend este en ejecucion.
+          </p>
+        </ClayCard>
       ) : (
         <TablaTarifas
           tarifas={tarifas}

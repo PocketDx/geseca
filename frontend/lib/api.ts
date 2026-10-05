@@ -274,6 +274,10 @@ export async function getTarifas(cookieStore: CookieStore): Promise<Tarifa[] | n
   return fetchBackend<Tarifa[]>("/catalogo/tarifas", cookieStore);
 }
 
+export async function crearTipoPrenda(datos: Omit<TipoPrenda, "id">): Promise<Response> {
+  return api("/catalogo/tipos-prenda", { method: "POST", body: datos });
+}
+
 export async function crearServicio(datos: Omit<Servicio, "id">): Promise<Response> {
   return api("/catalogo/servicios", { method: "POST", body: datos });
 }
