@@ -331,12 +331,13 @@ export async function solicitarRecuperacionPassword(identificador: string): Prom
 }
 
 export async function confirmarRecuperacionPassword(
+  uid: string,
   token: string,
   password: string,
 ): Promise<Response> {
   return api("/auth/confirmar-recuperacion", {
     method: "POST",
-    body: { token, password },
+    body: { uid, token, password },
   });
 }
 

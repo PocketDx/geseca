@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
-import { confirmarRecuperacionPassword } from "@/lib/api";
-import { AvisoPendiente, ClayButton, ClayCard, ClayField, ClayInput } from "../components/ui/clay";
+import { confirmarRecuperacionPassword, leerErroresApi } from "@/lib/api";
+import { ClayButton, ClayCard, ClayField, ClayInput } from "../components/ui/clay";
 
 export default function RestablecerPasswordPage() {
   return (
@@ -16,12 +16,11 @@ export default function RestablecerPasswordPage() {
 }
 
 function RestablecerPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const uid = searchParams.get("uid") ?? "";
   const token = searchParams.get("token") ?? "";
 
   const [completado, setCompletado] = useState(false);
-  const [pendiente, setPendiente] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -39,17 +38,18 @@ function RestablecerPasswordForm() {
     }
 
     setPending(true);
-    const response = await confirmarRecuperacionPassword(token, password).catch(() => null);
+    const response = await confirmarRecuperacionPassword(uid, token, password).catch(() => null);
     setPending(false);
 
-    // HU02 (SCRUM): falta el backend de correo (ver plot.md, "Pendiente").
-    // /api/auth/confirmar-recuperacion todavia no existe, asi que cualquier
-    // respuesta que no sea 2xx se trata igual: la pantalla esta lista, el
-    // cambio real llega cuando exista el endpoint.
     if (response?.ok) {
       setCompletado(true);
+    } else if (response) {
+      const errores = await leerErroresApi(response);
+      setError(
+        Object.values(errores).flat().join(" ") || "No se pudo actualizar la contrasena.",
+      );
     } else {
-      setPendiente(true);
+      setError("No hay conexion con el servidor. Intenta de nuevo.");
     }
   }
 
@@ -106,16 +106,6 @@ function RestablecerPasswordForm() {
               </ClayButton>
             </div>
           </form>
-        )}
-
-        {pendiente && (
-          <div className="mt-5">
-            <AvisoPendiente>
-              La recuperacion por correo (HU02) todavia no tiene backend de email
-              conectado. Este formulario ya esta listo: en cuanto exista
-              POST /api/auth/confirmar-recuperacion, empieza a funcionar sin cambios aqui.
-            </AvisoPendiente>
-          </div>
         )}
 
         <Link
