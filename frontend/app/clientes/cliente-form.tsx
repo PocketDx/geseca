@@ -1,21 +1,50 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { crearCliente, type ClienteFormulario } from "@/lib/api";
+import {
+  actualizarCliente,
+  crearCliente,
+  leerErroresApi,
+  type Cliente,
+  type ClienteFormulario,
+} from "@/lib/api";
 import { cx } from "@/lib/cx";
-import { AvisoPendiente, ClayButton, ClayField, ClayInput } from "../components/ui/clay";
+import { ClayButton, ClayField, ClayInput } from "../components/ui/clay";
 
-export default function ClienteForm({ className }: { className?: string }) {
-  const [pendiente, setPendiente] = useState(false);
+const ETIQUETAS: Record<string, string> = {
+  nombre_completo: "Nombre completo",
+  documento: "Documento",
+  telefono: "Telefono",
+  correo: "Correo",
+};
+
+export default function ClienteForm({
+  cliente,
+  onTerminar,
+  className,
+}: {
+  cliente?: Cliente;
+  onTerminar?: () => void;
+  className?: string;
+}) {
+  const router = useRouter();
+  const [errores, setErrores] = useState<string[]>([]);
+  const [guardado, setGuardado] = useState(false);
   const [pending, setPending] = useState(false);
+  const editando = cliente !== undefined;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // React deja currentTarget en null al terminar el evento; despues del
+    // await ya no se puede leer.
+    const formulario = event.currentTarget;
     setPending(true);
-    setPendiente(false);
+    setErrores([]);
+    setGuardado(false);
 
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formulario);
     const datos: ClienteFormulario = {
       nombre_completo: String(form.get("nombre_completo") ?? ""),
       documento: String(form.get("documento") ?? ""),
@@ -23,43 +52,85 @@ export default function ClienteForm({ className }: { className?: string }) {
       correo: String(form.get("correo") ?? ""),
     };
 
-    const response = await crearCliente(datos).catch(() => null);
+    const response = await (cliente ? actualizarCliente(cliente.id, datos) : crearCliente(datos)).catch(
+      () => null,
+    );
     setPending(false);
 
     if (response?.ok) {
-      event.currentTarget.reset();
-    } else {
-      setPendiente(true);
+      if (editando) {
+        onTerminar?.();
+      } else {
+        formulario.reset();
+        setGuardado(true);
+      }
+      router.refresh();
+      return;
     }
+
+    if (!response) {
+      setErrores(["No se pudo conectar con el servidor. Intenta de nuevo."]);
+      return;
+    }
+    const mensajes = Object.entries(await leerErroresApi(response)).flatMap(([campo, lista]) =>
+      lista.map((mensaje) => (ETIQUETAS[campo] ? `${ETIQUETAS[campo]}: ${mensaje}` : mensaje)),
+    );
+    setErrores(
+      mensajes.length
+        ? mensajes
+        : [`No se pudo ${editando ? "actualizar" : "registrar"} el cliente (error ${response.status}).`],
+    );
+  }
+
+  function onReset() {
+    setErrores([]);
+    setGuardado(false);
+    onTerminar?.();
   }
 
   return (
-    <form onSubmit={onSubmit} className={cx("grid grid-cols-1 gap-4 sm:grid-cols-2", className)}>
+    <form
+      onSubmit={onSubmit}
+      onReset={onReset}
+      className={cx("grid grid-cols-1 gap-4 sm:grid-cols-2", className)}
+    >
       <ClayField label="Nombre completo">
-        <ClayInput name="nombre_completo" required />
+        <ClayInput name="nombre_completo" defaultValue={cliente?.nombre_completo} required />
       </ClayField>
       <ClayField label="Documento">
-        <ClayInput name="documento" required />
+        <ClayInput name="documento" defaultValue={cliente?.documento} required />
       </ClayField>
       <ClayField label="Telefono">
-        <ClayInput name="telefono" required />
+        <ClayInput name="telefono" defaultValue={cliente?.telefono} required />
       </ClayField>
       <ClayField label="Correo">
-        <ClayInput name="correo" type="email" />
+        <ClayInput name="correo" type="email" defaultValue={cliente?.correo} />
       </ClayField>
 
-      <div className="sm:col-span-2">
+      <div className="flex items-center gap-3 sm:col-span-2">
         <ClayButton type="submit" disabled={pending}>
-          {pending ? "Guardando..." : "Guardar cliente"}
+          {pending ? "Guardando..." : editando ? "Guardar cambios" : "Guardar cliente"}
         </ClayButton>
+        <ClayButton type="reset" variant="secundario" disabled={pending}>
+          Cancelar
+        </ClayButton>
+        {guardado && (
+          <p role="status" className="text-sm text-(--sw-ink-soft)">
+            Cliente registrado.
+          </p>
+        )}
       </div>
 
-      {pendiente && (
-        <div className="sm:col-span-2">
-          <AvisoPendiente>
-            POST /api/clientes todavia no existe. El formulario queda listo
-            para conectarse cuando se implemente el endpoint de HU05.
-          </AvisoPendiente>
+      {errores.length > 0 && (
+        <div role="alert" className="clay-sm border-l-4 border-(--sw-peach) p-4 text-sm sm:col-span-2">
+          <p className="font-semibold text-(--sw-ink)">
+            No se pudo {editando ? "actualizar" : "registrar"} el cliente
+          </p>
+          <ul className="mt-1 list-inside list-disc text-(--sw-ink-soft)">
+            {errores.map((mensaje) => (
+              <li key={mensaje}>{mensaje}</li>
+            ))}
+          </ul>
         </div>
       )}
     </form>
