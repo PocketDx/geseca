@@ -20,8 +20,8 @@ export default async function UsuariosPage() {
           Usuarios internos
         </h1>
         <p className="mt-1 text-sm text-(--sw-ink-soft)">
-          Crea, edita y desactiva usuarios asignandoles un rol (HU03). El
-          historial de cada usuario esta en HU04.
+          Crea, edita y desactiva usuarios asignandoles un rol. El
+          historial de cada usuario esta en su fila.
         </p>
       </header>
 
@@ -32,10 +32,7 @@ export default async function UsuariosPage() {
 
       {usuarios === null ? (
         <AvisoPendiente>
-          GET /api/usuarios todavia no existe: accounts solo expone
-          login/logout/me/actuar-como. Esta pantalla ya esta lista para
-          listar, editar, desactivar y enlazar al historial en cuanto exista
-          el endpoint.
+          No se pudo cargar la lista de usuarios. Recarga la pagina o intenta de nuevo mas tarde.
         </AvisoPendiente>
       ) : (
         <TablaUsuarios usuarios={usuarios} />
