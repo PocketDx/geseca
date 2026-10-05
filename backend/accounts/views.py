@@ -1,7 +1,9 @@
+import hashlib
 import logging
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db.models import Q
 from django.utils.encoding import force_bytes
@@ -36,6 +38,32 @@ from .serializers import (
 )
 
 
+MAX_INTENTOS_LOGIN = 5
+BLOQUEO_LOGIN_SEGUNDOS = 15 * 60
+MENSAJE_LOGIN_BLOQUEADO = (
+    "Demasiados intentos fallidos. Intenta de nuevo en 15 minutos."
+)
+
+
+def _clave_intentos_login(username):
+    # Se cuenta por el nombre escrito, exista o no la cuenta: asi el bloqueo no
+    # delata cuales existen. El hash evita caracteres invalidos en la clave.
+    huella = hashlib.sha256(username.strip().lower().encode()).hexdigest()
+    return f"login-fallos:{huella}"
+
+
+def _registrar_fallo_login(clave):
+    cache.add(clave, 0, BLOQUEO_LOGIN_SEGUNDOS)
+    try:
+        fallos = cache.incr(clave)
+    except ValueError:
+        cache.set(clave, 1, BLOQUEO_LOGIN_SEGUNDOS)
+        return
+    if fallos == MAX_INTENTOS_LOGIN:
+        # Los 15 minutos corren desde el quinto fallo, no desde el primero.
+        cache.touch(clave, BLOQUEO_LOGIN_SEGUNDOS)
+
+
 @method_decorator(csrf_protect, name="dispatch")
 class LoginView(APIView):
     #! Crea la sesion de Django. El navegador recibe la cookie de sesion.
@@ -44,18 +72,28 @@ class LoginView(APIView):
 
     @extend_schema(
         request=LoginSerializer,
-        responses={200: UserSerializer, 401: dict},
+        responses={200: UserSerializer, 401: dict, 429: dict},
         summary="Iniciar sesión",
     )
     def post(self, request):
         data = LoginSerializer(data=request.data)
         data.is_valid(raise_exception=True)
+        clave = _clave_intentos_login(data.validated_data["username"])
+        if cache.get(clave, 0) >= MAX_INTENTOS_LOGIN:
+            # Bloquea incluso con la clave correcta: de lo contrario la
+            # respuesta delataria si el intento acertaba.
+            return Response(
+                {"detail": MENSAJE_LOGIN_BLOQUEADO},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
         user = authenticate(request, **data.validated_data)
         if user is None:
+            _registrar_fallo_login(clave)
             return Response(
                 {"detail": "Credenciales invalidas."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+        cache.delete(clave)
         login(request, user)
         return Response(UserSerializer(user).data)
 
