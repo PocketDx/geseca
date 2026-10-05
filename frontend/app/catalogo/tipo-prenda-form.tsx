@@ -3,14 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { crearServicio } from "@/lib/api";
+import { crearTipoPrenda } from "@/lib/api";
 import { cx } from "@/lib/cx";
 import { ClayButton, ClayField, ClayInput } from "../components/ui/clay";
 import { AlertaErrores, mensajesDeError } from "./errores";
 
-const ETIQUETAS = { nombre: "Nombre", descripcion: "Descripcion" };
+const ETIQUETAS = { nombre: "Nombre", material: "Material" };
 
-export default function ServicioForm({ className }: { className?: string }) {
+export default function TipoPrendaForm({ className }: { className?: string }) {
   const router = useRouter();
   const [errores, setErrores] = useState<string[]>([]);
   const [creado, setCreado] = useState(false);
@@ -25,9 +25,9 @@ export default function ServicioForm({ className }: { className?: string }) {
     setCreado(false);
 
     const form = new FormData(formulario);
-    const response = await crearServicio({
+    const response = await crearTipoPrenda({
       nombre: String(form.get("nombre") ?? "").trim(),
-      descripcion: String(form.get("descripcion") ?? "").trim(),
+      material: String(form.get("material") ?? "").trim(),
     }).catch(() => null);
     setPending(false);
 
@@ -37,37 +37,32 @@ export default function ServicioForm({ className }: { className?: string }) {
       router.refresh();
       return;
     }
-    setErrores(await mensajesDeError(response, ETIQUETAS, "No se pudo crear el servicio"));
+    setErrores(await mensajesDeError(response, ETIQUETAS, "No se pudo crear el tipo de prenda"));
   }
 
   return (
     <form onSubmit={onSubmit} className={cx("grid grid-cols-1 gap-4 sm:grid-cols-2", className)}>
-      <ClayField label="Nombre del servicio">
-        <ClayInput
-          name="nombre"
-          placeholder="Lavado, planchado, lavado en seco..."
-          maxLength={80}
-          required
-        />
+      <ClayField label="Nombre del tipo de prenda">
+        <ClayInput name="nombre" placeholder="Camisa, pantalon, cobija..." maxLength={80} required />
       </ClayField>
-      <ClayField label="Descripcion">
-        <ClayInput name="descripcion" maxLength={255} />
+      <ClayField label="Material">
+        <ClayInput name="material" placeholder="Algodon, lana..." maxLength={80} />
       </ClayField>
 
       <div className="flex items-center gap-3 sm:col-span-2">
         <ClayButton type="submit" disabled={pending}>
-          {pending ? "Guardando..." : "Agregar servicio"}
+          {pending ? "Guardando..." : "Agregar tipo de prenda"}
         </ClayButton>
         {creado && (
           <p role="status" className="text-sm text-(--sw-ink-soft)">
-            Servicio creado.
+            Tipo de prenda creado.
           </p>
         )}
       </div>
 
       {errores.length > 0 && (
         <div className="sm:col-span-2">
-          <AlertaErrores titulo="No se pudo crear el servicio" errores={errores} />
+          <AlertaErrores titulo="No se pudo crear el tipo de prenda" errores={errores} />
         </div>
       )}
     </form>
