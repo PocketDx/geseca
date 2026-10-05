@@ -9,7 +9,7 @@
 | Sección | Responsable | Estado |
 |---|---|---|
 | 1. Backend | Juan Daniel Torres Morales | ✅ Completo |
-| 2. Frontend | Dairo Javier Rodríguez Gómez | ⬜ Pendiente |
+| 2. Frontend | Dairo Javier Rodríguez Gómez | ✅ Completo |
 
 ---
 
@@ -66,10 +66,50 @@ El backend completo suma 107 pruebas OK.
 ---
 
 ## 2. Frontend
-*(Responsable: Dairo Javier Rodríguez Gómez — completar con lo entregado en HU03 [Desarrollo Frontend], SCRUM-65)*
 
-- **Resumen:**
-- **Decisiones de diseño/implementación:**
-- **Pantallas entregadas:** (nombre de cada pantalla/componente, qué permite hacer, capturas si aplica)
-- **Desviaciones frente a la especificación original:**
+**Subtarea:** SCRUM-65 · **PR:** #36 (editar, errores reales y cancelar sobre la pantalla de crear y desactivar que ya existía).
 
+### Resumen
+
+La pantalla `/usuarios` permite al administrador crear, editar y desactivar usuarios internos y consultar el historial de cada uno. Consume los endpoints de la sección 1 a través de `lib/api.ts` (`getUsuarios`, `crearUsuario`, `actualizarUsuario`, `desactivarUsuario`). Los archivos están en `frontend/app/usuarios/`.
+
+### Decisiones de diseño e implementación
+
+- **Un solo formulario para crear y editar.** `usuario-form.tsx` recibe un `usuario` opcional: sin él es el formulario de alta (`POST`); con él, el de edición (`PATCH`) precargado con los datos de la cuenta.
+- **Edición en la misma fila.** El botón Editar de cada fila despliega el formulario debajo de ella. Solo hay una fila en edición a la vez; abrir otra o pulsar Editar de nuevo cierra la actual.
+- **Contraseña opcional al editar.** El campo se llama "Contraseña nueva (opcional)" y el `PATCH` solo la incluye si se escribió algo. El resto de los campos (`username`, `email`, `first_name`, `last_name`, `rol`) se envían siempre.
+- **Los errores son los del backend.** El frontend solo marca como obligatorios `username`, `email` (con formato de correo), `rol` y, al crear, `password`. Todo lo demás lo valida el backend y la pantalla muestra lo que responde. `errores.tsx` convierte cada respuesta `400` en una lista de mensajes con `leerErroresApi` y antepone la etiqueta del campo (`Usuario`, `Correo`, `Nombres`, `Apellidos`, `Rol`, `Contrasena`); los mensajes sin campo, como `detail`, se muestran tal cual.
+- **Cancelar descarta sin llamar a la API.** Restablece el formulario, borra los mensajes y, si era una edición, cierra el editor. No se envía ninguna petición, así que no cambia nada (escenario 2 de la historia).
+- **Los datos se refrescan desde el servidor.** Tras crear, editar o desactivar con éxito se llama a `router.refresh()`, que vuelve a ejecutar `getUsuarios` en el Server Component de la página. No hay estado local de la lista que pueda desincronizarse.
+- **`reset()` con la referencia guardada.** El formulario se guarda en una variable antes del primer `await`, porque después `event.currentTarget` es `null` y el `reset()` fallaba.
+- **El estado vive en la fila.** El botón Desactivar no se muestra en usuarios inactivos. Mientras la petición está en curso el botón queda deshabilitado y muestra `...`. Desactivar no pide confirmación.
+
+### Pantallas entregadas
+
+| Pantalla o componente | Qué permite |
+|---|---|
+| `/usuarios` (`page.tsx`) | Lista de usuarios internos con el formulario "Nuevo usuario" encima. Si la lista no se puede cargar, muestra un aviso en lugar de la tabla. |
+| `usuario-form.tsx` | Alta y edición: usuario, correo, nombres, apellidos, rol (administrador, recepcionista, operario) y contraseña. Botones Crear usuario o Guardar cambios, y Cancelar. Tras crear muestra "Usuario creado." |
+| `tabla-usuarios.tsx` | Tabla con usuario, rol y estado (Activo o Inactivo). Cada fila tiene Historial, Editar y, solo si la cuenta está activa, Desactivar. |
+| `errores.tsx` | Convierte las respuestas de error en mensajes legibles y los muestra en una alerta. Si no hay conexión muestra "No se pudo conectar con el servidor. Intenta de nuevo."; si la respuesta no trae mensajes, "No se pudo … (error NNN)". |
+| `/usuarios/{id}/historial` | Ya existía (HU04). El botón Historial de cada fila enlaza a ella. |
+
+### Errores que muestra la pantalla
+
+| Situación | Respuesta del backend | Se muestra en |
+|---|---|---|
+| Contraseña débil o ausente, al crear o editar | `400 {"password": [...]}`, una lista con cada regla incumplida | La alerta del formulario, una línea por regla con el prefijo "Contrasena:" |
+| Quitar el rol de administrador al último administrador activo | `400 {"rol": ["Debe quedar al menos un administrador activo."]}` | La alerta del formulario, con el prefijo "Rol:" |
+| Desactivar al último administrador activo | `400 {"detail": "Debe quedar al menos un administrador activo."}` (cadena, no lista) | La alerta sobre la tabla, "No se pudo desactivar el usuario" |
+| Usuario repetido, correo o rol no válidos | `400` por campo | La alerta del formulario |
+| Sin conexión con el servidor | — | Mensaje de conexión |
+
+`leerErroresApi` normaliza ambas formas (lista o cadena) a una lista de mensajes.
+
+### Desviaciones frente a la especificación
+
+- **No se puede reactivar desde la pantalla.** La historia pide crear, editar y desactivar, y el backend no expone reactivación. Un usuario inactivo se puede editar, pero no volver a activar. Se reactiva desde el Django Admin (ver sección 1).
+- **`/usuarios` no comprueba el rol en el servidor.** La página solo exige sesión: sin ella redirige a `/login`. Que solo el administrador la vea depende de que la barra de navegación (`nav-bar.tsx`) muestre el enlace únicamente a ese rol, pero quien conozca la URL puede abrirla con cualquier sesión, y el backend tampoco restringe los endpoints. Lo resuelve T8 (SCRUM-57, sprint S4). La página de historial, en cambio, ya redirige a quien no es administrador.
+- **Sin confirmación al desactivar.** El botón actúa al primer clic. La baja es lógica y queda en el historial, pero no se puede deshacer desde la pantalla.
+- **El rol se muestra con el valor interno** (`administrador`, `recepcionista`, `operario`), sin etiqueta traducida.
+- **La contraseña se asigna a mano.** El formulario no genera contraseñas temporales ni obliga a cambiarla en el primer inicio de sesión.
