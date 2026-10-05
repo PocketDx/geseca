@@ -103,6 +103,7 @@ REST_FRAMEWORK = {
     ],
     # drf
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_RATES": {"recuperar-password": "5/hour"},
 }
 
 SPECTACULAR_SETTINGS = {

@@ -20,9 +20,9 @@ urlpatterns = [
     path("auth/me", MeView.as_view(), name="me"),
     path("auth/recuperar-password", RecuperarPasswordView.as_view(), name="recuperar-password"),
     path(
-        "auth/recuperar-password/confirmar",
+        "auth/confirmar-recuperacion",
         ConfirmarRecuperacionPasswordView.as_view(),
-        name="recuperar-password-confirmar",
+        name="confirmar-recuperacion",
     ),
     path("auth/actuar-como", ActuarComoView.as_view(), name="actuar-como"),
     path("usuarios", UsuarioInternoListCreateView.as_view(), name="usuarios"),

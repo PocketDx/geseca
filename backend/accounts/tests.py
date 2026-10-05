@@ -5,6 +5,7 @@ from unittest import mock
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
+from django.core.cache import cache
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework.test import APIClient, APITestCase
@@ -259,9 +260,10 @@ class AuditoriaTests(APITestCase):
 @override_settings(FRONTEND_URL="http://front.test")
 class RecuperarPasswordTests(APITestCase):
     SOLICITAR = "/api/auth/recuperar-password"
-    CONFIRMAR = "/api/auth/recuperar-password/confirmar"
+    CONFIRMAR = "/api/auth/confirmar-recuperacion"
 
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="ana", email="ana@smartwash.co", password="ClaveVieja#2026"
         )
@@ -269,7 +271,7 @@ class RecuperarPasswordTests(APITestCase):
         self.token = default_token_generator.make_token(self.user)
 
     def confirmar(self, **cambios):
-        datos = {"uid": self.uid, "token": self.token, "new_password": "ClaveNueva#2026", **cambios}
+        datos = {"uid": self.uid, "token": self.token, "password": "ClaveNueva#2026", **cambios}
         return self.client.post(self.CONFIRMAR, datos, format="json")
 
     def assertPasswordSinCambios(self):
@@ -283,7 +285,7 @@ class RecuperarPasswordTests(APITestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["ana@smartwash.co"])
         enlace = re.search(
-            r"http://front\.test/recuperar-password/confirmar\?uid=([^&]+)&token=(\S+)",
+            r"http://front\.test/restablecer-password\?uid=([^&]+)&token=(\S+)",
             mail.outbox[0].body,
         )
         self.assertIsNotNone(enlace)
@@ -331,6 +333,13 @@ class RecuperarPasswordTests(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("identificador", response.json())
 
+    def test_limita_las_solicitudes_repetidas(self):
+        for _ in range(5):
+            self.client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
+        response = self.client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(len(mail.outbox), 5)
+
     def test_solicitar_sin_token_csrf_se_rechaza(self):
         client = APIClient(enforce_csrf_checks=True)
         response = client.post(self.SOLICITAR, {"identificador": "ana"}, format="json")
@@ -347,7 +356,7 @@ class RecuperarPasswordTests(APITestCase):
 
     def test_el_enlace_solo_se_puede_usar_una_vez(self):
         self.assertEqual(self.confirmar().status_code, 200)
-        self.assertEqual(self.confirmar(new_password="OtraClave#2026").status_code, 400)
+        self.assertEqual(self.confirmar(password="OtraClave#2026").status_code, 400)
 
     def test_un_token_alterado_se_rechaza(self):
         response = self.confirmar(token="token-falso")
@@ -379,13 +388,13 @@ class RecuperarPasswordTests(APITestCase):
         self.assertEqual(self.confirmar().status_code, 400)
 
     def test_una_contrasena_debil_se_rechaza_con_el_motivo(self):
-        response = self.confirmar(new_password="123")
+        response = self.confirmar(password="123")
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("new_password", response.json())
+        self.assertIn("password", response.json())
         self.assertPasswordSinCambios()
 
     def test_confirmar_sin_campos_se_rechaza(self):
         response = self.client.post(self.CONFIRMAR, {}, format="json")
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(set(response.json()), {"uid", "token", "new_password"})
+        self.assertEqual(set(response.json()), {"uid", "token", "password"})

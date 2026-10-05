@@ -31,7 +31,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
-    new_password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
 
     default_error_messages = {"invalid_link": "El enlace de recuperación no es válido o expiró."}
 
@@ -46,16 +46,16 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             self.fail("invalid_link")
 
         try:
-            validate_password(attrs["new_password"], user=user)
+            validate_password(attrs["password"], user=user)
         except DjangoValidationError as exc:
-            raise serializers.ValidationError({"new_password": list(exc.messages)})
+            raise serializers.ValidationError({"password": list(exc.messages)})
 
         attrs["user"] = user
         return attrs
 
     def save(self):
         user = self.validated_data["user"]
-        user.set_password(self.validated_data["new_password"])
+        user.set_password(self.validated_data["password"])
         user.save(update_fields=["password"])
         return user
 

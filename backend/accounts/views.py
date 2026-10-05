@@ -17,6 +17,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema  # <-- Importamos extend_schema
 
@@ -71,6 +72,7 @@ class LogoutView(APIView):
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class MeView(APIView):
     """Usuario autenticado. Endpoint privado: responde 403 si no hay sesion.
+
     Ademas siembra la cookie csrftoken, que el frontend necesita antes del login.
     """
 
@@ -98,6 +100,8 @@ class RecuperarPasswordView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "recuperar-password"
 
     @extend_schema(
         request=PasswordResetRequestSerializer,
@@ -132,7 +136,7 @@ def enviar_correo_recuperacion(usuario):
     uid = urlsafe_base64_encode(force_bytes(usuario.pk))
     token = default_token_generator.make_token(usuario)
     enlace = (
-        f"{settings.FRONTEND_URL}/recuperar-password/confirmar?uid={uid}&token={token}"
+        f"{settings.FRONTEND_URL}/restablecer-password?uid={uid}&token={token}"
     )
     minutos = settings.PASSWORD_RESET_TIMEOUT // 60
     send_mail(
@@ -164,9 +168,7 @@ class ConfirmarRecuperacionPasswordView(APIView):
         return Response({"detail": "Contraseña actualizada. Ya puedes iniciar sesión."})
 
 
-from .serializers import (
-    ActuarComoSerializer,
-)  # agrega este import junto a los otros de .serializers
+from .serializers import ActuarComoSerializer  # agrega este import junto a los otros de .serializers
 
 # Cuentas fijas que puede tomar el selector de desarrollo. Nunca se acepta un
 # username fuera de esta lista, aunque el request lo pida.
@@ -208,11 +210,7 @@ class UsuarioInternoListCreateView(generics.ListCreateAPIView):
     queryset = get_user_model().objects.all().order_by("username")
 
     def get_serializer_class(self):
-        return (
-            UsuarioAdminSerializer
-            if self.request.method == "GET"
-            else UsuarioInternoSerializer
-        )
+        return UsuarioAdminSerializer if self.request.method == "GET" else UsuarioInternoSerializer
 
 
 class UsuarioInternoDetailView(generics.RetrieveUpdateAPIView):
