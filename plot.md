@@ -148,7 +148,7 @@ pruebas unitarias: se valida con pruebas funcionales.
 **Infraestructura**
 
 - Desplegar el backend: el repo ya trae `render.yaml`, gunicorn, WhiteNoise y
-  `psycopg`. Falta crear los servicios en Render y Neon y definir `BACKEND_URL` en
+  `psycopg`. Falta crear el Blueprint en Render y definir `BACKEND_URL` en
   Vercel; los pasos estan en el README.
 - **`BACKEND_URL` todavia no esta definida en Vercel.** Hasta que exista un
   backend publico al que apuntar, el frontend desplegado no puede autenticar:

@@ -1,3 +1,9 @@
+databases:
+  - name: smartwash-db
+    plan: free
+    databaseName: smartwash
+    user: smartwash
+
 services:
   - type: web
     name: smartwash-backend
@@ -23,4 +29,6 @@ services:
       - key: FRONTEND_URL
         sync: false
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: smartwash-db
+          property: connectionString

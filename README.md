@@ -397,27 +397,29 @@ Mientras el backend no este desplegado, `/` redirige a `/login` y el login
 responde "No hay conexion con el servidor". Es el comportamiento esperado: el
 frontend no se cae, simplemente no tiene con quien hablar.
 
-### Backend (Render + Neon, plan gratuito)
+### Backend (Render, plan gratuito)
 
 El backend **no** se despliega en Vercel. La configuracion esta en
 [`render.yaml`](render.yaml): un Web Service de Render con gunicorn, WhiteNoise
-para los estaticos del admin y migraciones al arrancar. La base es PostgreSQL en
-[Neon](https://neon.tech), cuyo plan gratuito no caduca.
+para los estaticos del admin y migraciones al arrancar, mas una base PostgreSQL
+de Render. Todo vive en el mismo panel.
 
-> Los limites de los planes gratuitos cambian; confirmalos en Render y Neon antes
-> de depender de ellos. En Render el servicio **se duerme tras ~15 minutos sin
-> trafico** y la primera peticion tarda de 30 a 60 segundos: abrelo un par de
-> minutos antes de una demo.
+> Los limites de los planes gratuitos cambian; confirmalos en Render antes de
+> depender de ellos. El servicio **se duerme tras ~15 minutos sin trafico** y la
+> primera peticion tarda de 30 a 60 segundos: abrelo un par de minutos antes de
+> una demo. **La base gratuita de Render caduca** (a la fecha, a los 30 dias) y
+> no tiene copias de seguridad: al caducar se pierden las cuentas y los datos.
+> Si el sistema debe durar mas, pasa a [Neon](https://neon.tech) (plan gratuito
+> sin caducidad): crea el proyecto y pega su cadena en `DATABASE_URL`, sin
+> tocar codigo.
 
-**1. Base de datos.** En Neon crea un proyecto y copia la cadena de conexion
-(`postgresql://...?sslmode=require`).
-
-**2. Backend.** En Render: *New → Blueprint*, elige este repositorio y la rama
-`main`. Render lee `render.yaml` y pide las variables que no se versionan:
+**1. Backend y base de datos.** En Render: *New → Blueprint*, elige este
+repositorio y la rama `main`. Render lee `render.yaml`, crea la base
+`smartwash-db`, conecta `DATABASE_URL` al servicio y pide las variables que no se
+versionan:
 
 | Variable | Valor |
 |----------|-------|
-| `DATABASE_URL` | La cadena de Neon |
 | `DJANGO_ALLOWED_HOSTS` | El dominio del servicio, ej. `smartwash-backend.onrender.com` (sin `https://`) |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | El dominio de Vercel con esquema, ej. `https://smartwash.vercel.app` |
 | `FRONTEND_URL` | El mismo dominio de Vercel; se usa en el enlace del correo de recuperacion |
@@ -426,23 +428,23 @@ para los estaticos del admin y migraciones al arrancar. La base es PostgreSQL en
 `DJANGO_SECRET_KEY`, el backend se niega a arrancar con `DEBUG=False`. Si cambias
 la version de Python (`PYTHON_VERSION`), debe ser 3.12 o superior.
 
-**3. Frontend.** En Vercel define `BACKEND_URL` con la URL publica del backend
+**2. Frontend.** En Vercel define `BACKEND_URL` con la URL publica del backend
 (`https://smartwash-backend.onrender.com`) y **redespliega**: se lee en build.
 
-**4. Primer administrador.** `seed_usuarios` no corre con `DEBUG=False`, y el
-plan gratuito de Render no da consola. Crea la cuenta desde tu maquina apuntando
-a la base de Neon:
+**3. Primer administrador.** `seed_usuarios` no corre con `DEBUG=False`, y el
+plan gratuito de Render no da consola. Crea la cuenta desde tu maquina con la
+*External Database URL* de `smartwash-db` (panel de la base en Render):
 
 ```bash
 cd backend
-DATABASE_URL="<cadena de Neon>" python manage.py migrate
-DATABASE_URL="<cadena de Neon>" python manage.py createsuperuser
+DATABASE_URL="<External Database URL>" python manage.py migrate
+DATABASE_URL="<External Database URL>" python manage.py createsuperuser
 ```
 
 Despues entra al Django Admin del backend desplegado (`/admin`) y ponle el rol
 `administrador` a ese usuario; sin el rol no ve fidelizacion ni trazabilidad.
 
-**5. Correo de recuperacion.** Por defecto se imprime en consola, asi que en
+**4. Correo de recuperacion.** Por defecto se imprime en consola, asi que en
 produccion no llega nada. Define `EMAIL_BACKEND` y las variables `EMAIL_*` (ver
 `backend/.env.example`) en Render para enviarlo por SMTP.
 
