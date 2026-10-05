@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: smartwash-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    # Un solo worker: los contadores de intentos de login y de recuperacion de
+    # contrasena viven en la memoria del proceso y no se comparten entre workers.
+    startCommand: python manage.py migrate --noinput && gunicorn config.wsgi:application --workers 1
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
