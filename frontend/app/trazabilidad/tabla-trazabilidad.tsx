@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { AccionAuditoria, TipoUsuarioAuditoria } from "@/lib/api";
+import { ACCIONES, FECHA_LEGIBLE } from "@/lib/auditoria";
 import { ClayBadge, ClayCard } from "../components/ui/clay";
 import { TIPOS_USUARIO } from "./tipos";
 
@@ -35,27 +36,34 @@ export default function TablaTrazabilidad({ acciones }: { acciones: AccionAudito
           </tr>
         </thead>
         <tbody>
-          {acciones.map((accion) => (
-            <tr key={accion.id} className="border-t border-(--sw-bg-deep)">
-              <td className="px-5 py-3 font-semibold text-(--sw-ink)">
-                {accion.usuario_id ? (
-                  <Link href={`/usuarios/${accion.usuario_id}/historial`} className="hover:underline">
-                    {accion.usuario}
-                  </Link>
-                ) : (
-                  accion.usuario
-                )}
-              </td>
-              <td className="px-5 py-3">
-                <ClayBadge color={COLOR_TIPO[accion.tipo_usuario]}>
-                  {ETIQUETA_TIPO[accion.tipo_usuario] ?? accion.tipo_usuario}
-                </ClayBadge>
-              </td>
-              <td className="px-5 py-3 text-(--sw-ink)">{accion.accion}</td>
-              <td className="px-5 py-3 text-(--sw-ink-soft)">{accion.detalle}</td>
-              <td className="px-5 py-3 text-(--sw-ink-soft)">{accion.fecha}</td>
-            </tr>
-          ))}
+          {acciones.map((accion) => {
+            const etiquetaAccion = ACCIONES[accion.accion];
+            return (
+              <tr key={accion.id} className="border-t border-(--sw-bg-deep)">
+                <td className="px-5 py-3 font-semibold text-(--sw-ink)">
+                  {accion.usuario_id ? (
+                    <Link href={`/usuarios/${accion.usuario_id}/historial`} className="hover:underline">
+                      {accion.usuario}
+                    </Link>
+                  ) : (
+                    accion.usuario
+                  )}
+                </td>
+                <td className="px-5 py-3">
+                  <ClayBadge color={COLOR_TIPO[accion.tipo_usuario]}>
+                    {ETIQUETA_TIPO[accion.tipo_usuario] ?? accion.tipo_usuario}
+                  </ClayBadge>
+                </td>
+                <td className="px-5 py-3">
+                  <ClayBadge color={etiquetaAccion?.color}>{etiquetaAccion?.etiqueta ?? accion.accion}</ClayBadge>
+                </td>
+                <td className="px-5 py-3 text-(--sw-ink-soft)">{accion.detalle}</td>
+                <td className="px-5 py-3 whitespace-nowrap text-(--sw-ink-soft)">
+                  {FECHA_LEGIBLE.format(new Date(accion.fecha))}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </ClayCard>
