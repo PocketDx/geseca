@@ -146,6 +146,120 @@ class CatalogoApiTests(APITestCase):
         self.assertEqual(Tarifa.objects.count(), 1)
         self.assertIsNone(Tarifa.objects.get().vigente_hasta)
 
+    def test_rechaza_una_tarifa_cerrada_que_se_cruza_con_la_vigente(self):
+        self.client.post("/api/catalogo/tarifas", self.datos_tarifa(vigente_desde="2026-06-01"))
+        response = self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-07-01", vigente_hasta="2026-08-01"),
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("vigente_desde", response.json())
+        self.assertEqual(Tarifa.objects.count(), 1)
+        self.assertIsNone(Tarifa.objects.get().vigente_hasta)
+
+    def test_rechaza_una_tarifa_cerrada_que_se_cruza_con_una_historica(self):
+        self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-01-01", vigente_hasta="2026-03-01"),
+        )
+        response = self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-02-01", vigente_hasta="2026-04-01"),
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Tarifa.objects.count(), 1)
+
+    def test_rechaza_una_tarifa_cerrada_que_envuelve_a_otra(self):
+        self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-02-01", vigente_hasta="2026-03-01"),
+        )
+        response = self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-01-01", vigente_hasta="2026-06-01"),
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_acepta_tarifas_cerradas_contiguas(self):
+        self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-01-01", vigente_hasta="2026-03-01"),
+        )
+        response = self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-03-01", vigente_hasta="2026-04-01"),
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_acepta_una_tarifa_cerrada_anterior_a_la_vigente(self):
+        self.client.post("/api/catalogo/tarifas", self.datos_tarifa(vigente_desde="2026-06-01"))
+        response = self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-01-01", vigente_hasta="2026-06-01"),
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Tarifa.objects.filter(vigente_hasta__isnull=True).count(), 1)
+
+    def test_el_solape_solo_se_evalua_dentro_del_mismo_par_prenda_servicio(self):
+        pantalon = TipoPrenda.objects.create(nombre="Pantalon")
+        self.client.post("/api/catalogo/tarifas", self.datos_tarifa(vigente_desde="2026-06-01"))
+        response = self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(
+                tipo_prenda=pantalon.pk, vigente_desde="2026-07-01", vigente_hasta="2026-08-01"
+            ),
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_una_tarifa_nueva_abierta_no_puede_cruzarse_con_una_cerrada_posterior(self):
+        Tarifa.objects.create(
+            tipo_prenda=self.camisa,
+            servicio=self.lavado,
+            valor=Decimal("7000"),
+            plazo_entrega_dias=2,
+            vigente_desde=date(2026, 7, 1),
+            vigente_hasta=date(2026, 8, 1),
+        )
+        Tarifa.objects.create(
+            tipo_prenda=self.camisa,
+            servicio=self.lavado,
+            valor=Decimal("8000"),
+            plazo_entrega_dias=2,
+            vigente_desde=date(2026, 6, 1),
+        )
+        response = self.client.post(
+            "/api/catalogo/tarifas", self.datos_tarifa(vigente_desde="2026-06-15")
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Tarifa.objects.count(), 2)
+
+    def test_editar_una_tarifa_no_choca_consigo_misma(self):
+        tarifa_id = self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-01-01", vigente_hasta="2026-03-01"),
+        ).json()["id"]
+        response = self.client.patch(
+            f"/api/catalogo/tarifas/{tarifa_id}",
+            {"valor": "8500.00", "vigente_hasta": "2026-04-01"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Tarifa.objects.get(pk=tarifa_id).vigente_hasta, date(2026, 4, 1))
+
+    def test_no_permite_extender_una_tarifa_hasta_cruzarse_con_otra(self):
+        primera = self.client.post(
+            "/api/catalogo/tarifas",
+            self.datos_tarifa(vigente_desde="2026-01-01", vigente_hasta="2026-03-01"),
+        ).json()["id"]
+        self.client.post("/api/catalogo/tarifas", self.datos_tarifa(vigente_desde="2026-03-01"))
+        response = self.client.patch(
+            f"/api/catalogo/tarifas/{primera}",
+            {"vigente_hasta": "2026-05-01"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Tarifa.objects.get(pk=primera).vigente_hasta, date(2026, 3, 1))
+
     def test_no_permite_mover_una_tarifa_a_otro_servicio(self):
         tarifa_id = self.client.post("/api/catalogo/tarifas", self.datos_tarifa()).json()["id"]
         planchado = Servicio.objects.create(nombre="Planchado")
