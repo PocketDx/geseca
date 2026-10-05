@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getClientes, getCurrentUser } from "@/lib/api";
-import { AvisoPendiente, ClayCard } from "../components/ui/clay";
+import { ClayCard } from "../components/ui/clay";
 import ClienteForm from "./cliente-form";
 import TablaClientes from "./tabla-clientes";
 
@@ -10,6 +10,7 @@ export default async function ClientesPage() {
   const cookieStore = await cookies();
   const user = await getCurrentUser(cookieStore);
   if (!user) redirect("/login");
+  if (user.rol === "operario") redirect("/");
 
   const clientes = await getClientes(cookieStore);
 
@@ -18,7 +19,7 @@ export default async function ClientesPage() {
       <header className="mb-6">
         <h1 className="text-2xl font-extrabold tracking-tight text-(--sw-ink)">Clientes</h1>
         <p className="mt-1 text-sm text-(--sw-ink-soft)">
-          Registra y edita los datos de tus clientes (HU05).
+          Registra y edita los datos de tus clientes.
         </p>
       </header>
 
@@ -28,11 +29,11 @@ export default async function ClientesPage() {
       </ClayCard>
 
       {clientes === null ? (
-        <AvisoPendiente>
-          GET /api/clientes todavia no existe: la app clientes solo tiene el
-          modelo (ver plot.md). Esta pantalla ya esta lista para listar y
-          editar en cuanto se agregue el serializer y el viewset.
-        </AvisoPendiente>
+        <ClayCard>
+          <p className="text-sm text-(--sw-ink-soft)">
+            No se pudieron cargar los clientes. Verifica que el backend este en ejecucion.
+          </p>
+        </ClayCard>
       ) : (
         <TablaClientes clientes={clientes} />
       )}
