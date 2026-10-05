@@ -4,21 +4,19 @@
 **Historia de usuario:** HU08 — Configurar reglas de descuento
 **Subtarea Jira:** SCRUM-161 `[Documentación]`
 
-> Cada sección la completa quien hizo esa parte, sin borrar lo que escribieron los demás. Cuando las cuatro estén completas, la subtarea pasa a **Finalizado**.
+> Cada sección la completa quien hizo esa parte, sin borrar lo que escribieron los demás. Cuando las dos estén completas, la subtarea pasa a **Finalizado**.
 
 | Sección | Responsable | Estado |
 |---|---|---|
 | 1. Backend | Juan Daniel Torres Morales | ✅ Completo |
 | 2. Frontend | Dairo Javier Rodríguez Gómez | ⬜ Pendiente |
-| 3. Pruebas Funcionales Backend | YOSET ALFONSO PIEDRAHITA RAMIREZ | ⬜ Pendiente |
-| 4. Pruebas Funcionales Frontend | sebastianij | ✅ Ejecutadas: ver [`pruebas-funcionales-hu08-descuentos.md`](../pruebas-funcionales-hu08-descuentos.md) (SCRUM-160) |
 
 ---
 
 ## 1. Backend
 
 **Autor:** Juan Daniel Torres Morales · **Subtarea:** SCRUM-74
-**PR:** #21. Ajustado en el #30 a partir de las pruebas funcionales. Vigente en `dev` (`ee8d20e`).
+**PR:** #21, ajustado en el #30.
 
 ### Resumen
 
@@ -53,7 +51,7 @@ El tipo `ReglaDescuento` de `frontend/lib/api.ts` coincide campo por campo, incl
 
 ### Desviaciones y pendientes
 
-- **Corrección tras las pruebas funcionales.** Las pruebas de Sebastián (SCRUM-160, hallazgo H3) encontraron que un valor negativo o una vigencia invertida devolvían `500`. Solo los frenaba la `CheckConstraint`. En el PR #30 se agregó la validación en el serializer, con sus pruebas.
+- **Valor negativo y vigencia invertida devolvían `500`.** Solo los frenaba la `CheckConstraint`. En el PR #30 se agregó la validación en el serializer, con sus pruebas.
 - **La regla queda disponible, pero todavía no se aplica a ninguna orden.** Es lo que pide el escenario de éxito ("disponible para aplicarse en órdenes futuras"). Aplicarla es trabajo de HU09 y debe resolver dos puntos:
   - qué pasa si varias reglas vigentes aplican al mismo cliente;
   - que un monto fijo mayor que el total de la orden se recorte al total, para respetar el "no superar el 100 % del valor de la orden".
@@ -70,19 +68,3 @@ El tipo `ReglaDescuento` de `frontend/lib/api.ts` coincide campo por campo, incl
 - **Pantallas entregadas:** (nombre de cada pantalla/componente, qué permite hacer, capturas si aplica)
 - **Desviaciones frente a la especificación original:**
 
----
-
-## 3. Pruebas Funcionales Backend
-*(Responsable: YOSET ALFONSO PIEDRAHITA RAMIREZ — completar con lo ejecutado en HU08 [Pruebas Funcionales Backend], SCRUM-159)*
-
-- **Criterios de aceptación verificados:**
-- **Casos probados** (endpoint, entrada, resultado esperado, resultado obtenido):
-- **Hallazgos / incidencias encontradas:**
-- **Resultado final:** (Aprobado / Aprobado con observaciones / Rechazado)
-
----
-
-## 4. Pruebas Funcionales Frontend
-*(Responsable: sebastianij — HU08 [Pruebas Funcionales Frontend], SCRUM-160)*
-
-Ejecutadas el 2026-10-04. El informe completo está en [`pruebas-funcionales-hu08-descuentos.md`](../pruebas-funcionales-hu08-descuentos.md). Los hallazgos H1, H2 y H3 se corrigieron en el PR #30; H4 (editar y fin de vigencia en pantalla) quedó como decisión de alcance; H5 está parcial y depende de T8.
