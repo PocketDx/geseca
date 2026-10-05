@@ -111,14 +111,9 @@ export async function actuarComo(username: string): Promise<User | null> {
   return response.ok ? ((await response.json()) as User) : null;
 }
 
-/* --------------------------------------------------------------------------
- * Lo de aqui abajo consume endpoints que todavia no existen en el backend
- * (clientes/, catalogo/ y ordenes/ solo tienen modelos; fidelizacion/ ni
- * siquiera existe como app). Las rutas y formas de datos son las que se
- * acordaron en el modelo de plot.md; cuando alguien implemente el endpoint
- * en Django, esta capa deja de devolver null sin que el resto del frontend
- * cambie.
- * -------------------------------------------------------------------------- */
+/* Clientes, catalogo, fidelizacion, usuarios y auditoria ya tienen endpoints en
+ * Django. Ordenes, rastreo publico y PQRS todavia no: sus funciones devuelven
+ * null o fallan sin romper la pantalla. */
 
 /** GET server-side generico: reenvia cookies y nunca lanza. Un backend caido
  * y un endpoint que aun no existe (404) se ven igual desde la pagina: null. */
@@ -255,12 +250,16 @@ export type Servicio = { id: number; nombre: string; descripcion: string };
 export type Tarifa = {
   id: number;
   tipo_prenda: number;
+  tipo_prenda_nombre: string;
   servicio: number;
+  servicio_nombre: string;
   valor: string;
   plazo_entrega_dias: number;
   vigente_desde: string;
   vigente_hasta: string | null;
 };
+
+export type TarifaFormulario = Omit<Tarifa, "id" | "tipo_prenda_nombre" | "servicio_nombre">;
 
 export async function getTiposPrenda(cookieStore: CookieStore): Promise<TipoPrenda[] | null> {
   return fetchBackend<TipoPrenda[]>("/catalogo/tipos-prenda", cookieStore);
@@ -270,8 +269,14 @@ export async function getServicios(cookieStore: CookieStore): Promise<Servicio[]
   return fetchBackend<Servicio[]>("/catalogo/servicios", cookieStore);
 }
 
-export async function getTarifas(cookieStore: CookieStore): Promise<Tarifa[] | null> {
-  return fetchBackend<Tarifa[]>("/catalogo/tarifas", cookieStore);
+export async function getTarifas(
+  cookieStore: CookieStore,
+  soloVigentes = false,
+): Promise<Tarifa[] | null> {
+  return fetchBackend<Tarifa[]>(
+    `/catalogo/tarifas${soloVigentes ? "?vigentes=1" : ""}`,
+    cookieStore,
+  );
 }
 
 export async function crearTipoPrenda(datos: Omit<TipoPrenda, "id">): Promise<Response> {
@@ -282,13 +287,27 @@ export async function crearServicio(datos: Omit<Servicio, "id">): Promise<Respon
   return api("/catalogo/servicios", { method: "POST", body: datos });
 }
 
-export async function crearTarifa(datos: Omit<Tarifa, "id">): Promise<Response> {
+export async function actualizarTipoPrenda(
+  id: number,
+  datos: Partial<Omit<TipoPrenda, "id">>,
+): Promise<Response> {
+  return api(`/catalogo/tipos-prenda/${id}`, { method: "PATCH", body: datos });
+}
+
+export async function actualizarServicio(
+  id: number,
+  datos: Partial<Omit<Servicio, "id">>,
+): Promise<Response> {
+  return api(`/catalogo/servicios/${id}`, { method: "PATCH", body: datos });
+}
+
+export async function crearTarifa(datos: TarifaFormulario): Promise<Response> {
   return api("/catalogo/tarifas", { method: "POST", body: datos });
 }
 
 export async function actualizarTarifa(
   id: number,
-  datos: Partial<Omit<Tarifa, "id">>,
+  datos: Partial<TarifaFormulario>,
 ): Promise<Response> {
   return api(`/catalogo/tarifas/${id}`, { method: "PATCH", body: datos });
 }

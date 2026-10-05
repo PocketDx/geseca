@@ -1,0 +1,120 @@
+"use client";
+
+import { Fragment, useState, type ReactNode } from "react";
+
+import type { Servicio, TipoPrenda } from "@/lib/api";
+import { ClayButton, ClayCard } from "../components/ui/clay";
+import ServicioForm from "./servicio-form";
+import TipoPrendaForm from "./tipo-prenda-form";
+
+type Columna = { titulo: string; valor: string };
+
+function TablaEditable<T extends { id: number }>({
+  filas,
+  vacio,
+  columnas,
+  formulario,
+}: {
+  filas: T[];
+  vacio: string;
+  columnas: (fila: T) => Columna[];
+  formulario: (fila: T, terminar: () => void) => ReactNode;
+}) {
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+
+  if (filas.length === 0) {
+    return (
+      <ClayCard>
+        <p className="text-sm text-(--sw-ink-soft)">{vacio}</p>
+      </ClayCard>
+    );
+  }
+
+  return (
+    <ClayCard className="overflow-x-auto p-0">
+      <table className="sw-tabla w-full text-left text-sm">
+        <thead>
+          <tr className="text-xs font-bold tracking-wide text-(--sw-ink-soft) uppercase">
+            {columnas(filas[0]).map((columna) => (
+              <th key={columna.titulo} className="px-5 py-3">
+                {columna.titulo}
+              </th>
+            ))}
+            <th className="px-5 py-3">
+              <span className="sr-only">Acciones</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((fila) => {
+            const celdas = columnas(fila);
+            return (
+              <Fragment key={fila.id}>
+                <tr className="border-t border-(--sw-hairline)">
+                  {celdas.map((celda, indice) => (
+                    <td
+                      key={celda.titulo}
+                      data-label={celda.titulo}
+                      className={
+                        indice === 0
+                          ? "px-5 py-3 font-semibold text-(--sw-ink)"
+                          : "px-5 py-3 text-(--sw-ink-soft)"
+                      }
+                    >
+                      {celda.valor || "—"}
+                    </td>
+                  ))}
+                  <td className="px-5 py-3 text-right">
+                    <ClayButton
+                      type="button"
+                      variant="secundario"
+                      disabled={editandoId === fila.id}
+                      onClick={() => setEditandoId(fila.id)}
+                    >
+                      Editar
+                    </ClayButton>
+                  </td>
+                </tr>
+                {editandoId === fila.id && (
+                  <tr className="bg-(--sw-bg-deep)/30">
+                    <td colSpan={celdas.length + 1} className="px-5 py-4">
+                      {formulario(fila, () => setEditandoId(null))}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </ClayCard>
+  );
+}
+
+export function TablaTiposPrenda({ tiposPrenda }: { tiposPrenda: TipoPrenda[] }) {
+  return (
+    <TablaEditable
+      filas={tiposPrenda}
+      vacio="Todavia no hay tipos de prenda."
+      columnas={(tipo) => [
+        { titulo: "Tipo de prenda", valor: tipo.nombre },
+        { titulo: "Material", valor: tipo.material },
+      ]}
+      formulario={(tipo, terminar) => <TipoPrendaForm tipoPrenda={tipo} onTerminar={terminar} />}
+    />
+  );
+}
+
+export function TablaServicios({ servicios }: { servicios: Servicio[] }) {
+  return (
+    <TablaEditable
+      filas={servicios}
+      vacio="Todavia no hay servicios."
+      columnas={(servicio) => [
+        { titulo: "Servicio", valor: servicio.nombre },
+        { titulo: "Descripcion", valor: servicio.descripcion },
+      ]}
+      formulario={(servicio, terminar) => <ServicioForm servicio={servicio} onTerminar={terminar} />}
+    />
+  );
+}

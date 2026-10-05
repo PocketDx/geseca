@@ -109,7 +109,7 @@ export default function UsuarioForm({ className, usuario, onTerminar }: Props) {
         />
       </ClayField>
 
-      <div className="flex items-center gap-3 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <ClayButton type="submit" disabled={pending}>
           {pending ? "Guardando..." : editando ? "Guardar cambios" : "Crear usuario"}
         </ClayButton>

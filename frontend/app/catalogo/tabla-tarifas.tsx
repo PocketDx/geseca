@@ -3,21 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { actualizarTarifa, type Servicio, type Tarifa, type TipoPrenda } from "@/lib/api";
+import { actualizarTarifa, type Tarifa } from "@/lib/api";
 import { formatCOP, formatFecha } from "@/lib/format";
 import { ClayBadge, ClayButton, ClayCard, ClayInput } from "../components/ui/clay";
 import { AlertaErrores, mensajesDeError } from "./errores";
 import { ETIQUETAS_TARIFA } from "./tarifa-form";
 
-export default function TablaTarifas({
-  tarifas,
-  tiposPrenda,
-  servicios,
-}: {
-  tarifas: Tarifa[];
-  tiposPrenda: TipoPrenda[];
-  servicios: Servicio[];
-}) {
+export default function TablaTarifas({ tarifas }: { tarifas: Tarifa[] }) {
   const router = useRouter();
   const [editando, setEditando] = useState<Tarifa | null>(null);
   const [valor, setValor] = useState("");
@@ -29,13 +21,10 @@ export default function TablaTarifas({
   if (tarifas.length === 0) {
     return (
       <ClayCard>
-        <p className="text-sm text-(--sw-ink-soft)">Todavia no hay tarifas registradas.</p>
+        <p className="text-sm text-(--sw-ink-soft)">No hay tarifas para mostrar.</p>
       </ClayCard>
     );
   }
-
-  const nombreTipo = (id: number) => tiposPrenda.find((t) => t.id === id)?.nombre ?? `#${id}`;
-  const nombreServicio = (id: number) => servicios.find((s) => s.id === id)?.nombre ?? `#${id}`;
 
   function empezarEdicion(tarifa: Tarifa) {
     setEditando(tarifa);
@@ -71,7 +60,7 @@ export default function TablaTarifas({
 
   return (
     <ClayCard className="overflow-x-auto p-0">
-      <table className="w-full text-left text-sm">
+      <table className="sw-tabla w-full text-left text-sm">
         <thead>
           <tr className="text-xs font-bold tracking-wide text-(--sw-ink-soft) uppercase">
             <th className="px-5 py-3">Prenda</th>
@@ -91,8 +80,8 @@ export default function TablaTarifas({
               <FilaTarifa
                 key={tarifa.id}
                 tarifa={tarifa}
-                prenda={nombreTipo(tarifa.tipo_prenda)}
-                servicio={nombreServicio(tarifa.servicio)}
+                prenda={tarifa.tipo_prenda_nombre}
+                servicio={tarifa.servicio_nombre}
                 enEdicion={enEdicion}
                 deshabilitado={editando !== null && !enEdicion}
                 valor={valor}
@@ -152,12 +141,12 @@ function FilaTarifa({
 }) {
   return (
     <>
-      <tr className="border-t border-(--sw-bg-deep)">
-        <td className="px-5 py-3 font-semibold text-(--sw-ink)">{prenda}</td>
-        <td className="px-5 py-3 text-(--sw-ink-soft)">{servicio}</td>
+      <tr className="border-t border-(--sw-hairline)">
+        <td data-label="Prenda" className="px-5 py-3 font-semibold text-(--sw-ink)">{prenda}</td>
+        <td data-label="Servicio" className="px-5 py-3 text-(--sw-ink-soft)">{servicio}</td>
         {enEdicion ? (
           <>
-            <td className="px-5 py-3">
+            <td data-label="Valor" className="px-5 py-3">
               <ClayInput
                 aria-label="Valor (COP)"
                 type="number"
@@ -169,7 +158,7 @@ function FilaTarifa({
                 required
               />
             </td>
-            <td className="px-5 py-3">
+            <td data-label="Plazo" className="px-5 py-3">
               <ClayInput
                 aria-label="Plazo de entrega (dias)"
                 type="number"
@@ -180,7 +169,7 @@ function FilaTarifa({
                 required
               />
             </td>
-            <td className="px-5 py-3">
+            <td data-label="Vigencia" className="px-5 py-3">
               <ClayInput
                 aria-label="Vigente hasta"
                 type="date"
@@ -202,11 +191,11 @@ function FilaTarifa({
           </>
         ) : (
           <>
-            <td className="px-5 py-3 font-semibold text-(--sw-ink) tabular-nums">
+            <td data-label="Valor" className="px-5 py-3 font-semibold text-(--sw-ink) tabular-nums">
               {formatCOP(tarifa.valor)}
             </td>
-            <td className="px-5 py-3 text-(--sw-ink-soft)">{tarifa.plazo_entrega_dias} dias</td>
-            <td className="px-5 py-3">
+            <td data-label="Plazo" className="px-5 py-3 text-(--sw-ink-soft)">{tarifa.plazo_entrega_dias} dias</td>
+            <td data-label="Vigencia" className="px-5 py-3">
               <ClayBadge color={tarifa.vigente_hasta ? "peach" : "mint"}>
                 {tarifa.vigente_hasta ? `Hasta ${formatFecha(tarifa.vigente_hasta)}` : "Vigente"}
               </ClayBadge>

@@ -20,7 +20,7 @@ export async function mensajesDeError(response: Response | null, accion: string)
 export function AlertaErrores({ titulo, mensajes }: { titulo: string; mensajes: string[] }) {
   if (mensajes.length === 0) return null;
   return (
-    <div role="alert" className="clay-sm border-l-4 border-(--sw-peach) p-4 text-sm">
+    <div role="alert" className="clay-sm border-l-8 border-l-(--sw-coral) p-4 text-sm">
       <p className="font-semibold text-(--sw-ink)">{titulo}</p>
       <ul className="mt-1 list-inside list-disc text-(--sw-ink-soft)">
         {mensajes.map((mensaje) => (

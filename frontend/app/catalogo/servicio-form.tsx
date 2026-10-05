@@ -3,18 +3,28 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { crearServicio } from "@/lib/api";
+import { actualizarServicio, crearServicio, type Servicio } from "@/lib/api";
 import { cx } from "@/lib/cx";
 import { ClayButton, ClayField, ClayInput } from "../components/ui/clay";
 import { AlertaErrores, mensajesDeError } from "./errores";
 
 const ETIQUETAS = { nombre: "Nombre", descripcion: "Descripcion" };
 
-export default function ServicioForm({ className }: { className?: string }) {
+export default function ServicioForm({
+  servicio,
+  onTerminar,
+  className,
+}: {
+  servicio?: Servicio;
+  onTerminar?: () => void;
+  className?: string;
+}) {
   const router = useRouter();
   const [errores, setErrores] = useState<string[]>([]);
   const [creado, setCreado] = useState(false);
   const [pending, setPending] = useState(false);
+  const editando = servicio !== undefined;
+  const accion = editando ? "actualizar" : "crear";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,19 +35,26 @@ export default function ServicioForm({ className }: { className?: string }) {
     setCreado(false);
 
     const form = new FormData(formulario);
-    const response = await crearServicio({
+    const datos = {
       nombre: String(form.get("nombre") ?? "").trim(),
       descripcion: String(form.get("descripcion") ?? "").trim(),
-    }).catch(() => null);
+    };
+    const response = await (servicio ? actualizarServicio(servicio.id, datos) : crearServicio(datos)).catch(
+      () => null,
+    );
     setPending(false);
 
     if (response?.ok) {
-      formulario.reset();
-      setCreado(true);
+      if (editando) {
+        onTerminar?.();
+      } else {
+        formulario.reset();
+        setCreado(true);
+      }
       router.refresh();
       return;
     }
-    setErrores(await mensajesDeError(response, ETIQUETAS, "No se pudo crear el servicio"));
+    setErrores(await mensajesDeError(response, ETIQUETAS, `No se pudo ${accion} el servicio`));
   }
 
   return (
@@ -45,19 +62,25 @@ export default function ServicioForm({ className }: { className?: string }) {
       <ClayField label="Nombre del servicio">
         <ClayInput
           name="nombre"
+          defaultValue={servicio?.nombre}
           placeholder="Lavado, planchado, lavado en seco..."
           maxLength={80}
           required
         />
       </ClayField>
       <ClayField label="Descripcion">
-        <ClayInput name="descripcion" maxLength={255} />
+        <ClayInput name="descripcion" defaultValue={servicio?.descripcion} maxLength={255} />
       </ClayField>
 
-      <div className="flex items-center gap-3 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <ClayButton type="submit" disabled={pending}>
-          {pending ? "Guardando..." : "Agregar servicio"}
+          {pending ? "Guardando..." : editando ? "Guardar cambios" : "Agregar servicio"}
         </ClayButton>
+        {editando && (
+          <ClayButton type="button" variant="secundario" onClick={onTerminar} disabled={pending}>
+            Cancelar
+          </ClayButton>
+        )}
         {creado && (
           <p role="status" className="text-sm text-(--sw-ink-soft)">
             Servicio creado.
@@ -67,7 +90,7 @@ export default function ServicioForm({ className }: { className?: string }) {
 
       {errores.length > 0 && (
         <div className="sm:col-span-2">
-          <AlertaErrores titulo="No se pudo crear el servicio" errores={errores} />
+          <AlertaErrores titulo={`No se pudo ${accion} el servicio`} errores={errores} />
         </div>
       )}
     </form>

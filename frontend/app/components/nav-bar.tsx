@@ -4,16 +4,15 @@ import Link from "next/link";
 import { getCurrentUser, type Rol } from "@/lib/api";
 import { clayBtnClass } from "./ui/clay";
 import ActuarComoSelector from "./actuar-como";
-
-type Enlace = { href: string; label: string };
+import NavMenu, { type Enlace } from "./nav-menu";
 
 // Sin sesion: nav de cara al cliente que entra a la lavanderia, no al panel
 // interno. Con sesion: cada rol ve solo sus modulos (T8/SCRUM-57 hace esto
 // exigible tambien en el backend; aqui es solo lo que se muestra).
 const PUBLICOS: Enlace[] = [
-  { href: "/#servicios", label: "Nuestros servicios" },
+  { href: "/#servicios", label: "Servicios" },
   { href: "/#como-funciona", label: "Como funciona" },
-  { href: "/rastrear-pedido", label: "Rastrear mi pedido" },
+  { href: "/rastrear-pedido", label: "Rastrear pedido" },
   { href: "/pqrs", label: "PQRS" },
 ];
 
@@ -39,35 +38,14 @@ export default async function NavBar() {
   const enlaces = user ? POR_ROL[user.rol] : PUBLICOS;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-(--sw-bg-deep) bg-(--sw-surface)/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-8">
-        <Link href="/" className="text-lg font-extrabold tracking-tight text-(--sw-ink)">
-          Smart<span className="text-[#5b8fb0]">Wash</span>
+    <NavMenu enlaces={enlaces}>
+      {user ? (
+        <ActuarComoSelector />
+      ) : (
+        <Link href="/login" className={clayBtnClass("coral")}>
+          Iniciar sesion
         </Link>
-
-        <div className="flex flex-wrap items-center gap-3 sm:gap-5">
-          <ul className="flex flex-wrap gap-1 text-sm">
-            {enlaces.map((enlace) => (
-              <li key={enlace.href}>
-                <Link
-                  href={enlace.href}
-                  className="rounded-full px-3 py-1.5 font-semibold text-(--sw-ink-soft) transition-colors hover:bg-(--sw-bg-deep) hover:text-(--sw-ink)"
-                >
-                  {enlace.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          {user ? (
-            <ActuarComoSelector />
-          ) : (
-            <Link href="/login" className={clayBtnClass("primario")}>
-              Iniciar sesion
-            </Link>
-          )}
-        </div>
-      </div>
-    </header>
+      )}
+    </NavMenu>
   );
 }

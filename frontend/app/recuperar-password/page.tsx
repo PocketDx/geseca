@@ -32,9 +32,9 @@ export default function RecuperarPasswordPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-64px)] max-w-sm flex-col justify-center p-4 sm:p-8">
+    <main className="mx-auto flex min-h-[calc(100svh-4rem)] max-w-md flex-col justify-center px-4 py-8 sm:px-8">
       <ClayCard>
-        <h1 className="text-xl font-extrabold tracking-tight text-(--sw-ink)">
+        <h1 className="font-sans text-3xl font-black tracking-[-0.04em] text-(--sw-ink)">
           Recuperar contrasena
         </h1>
         <p className="mt-1 text-sm text-(--sw-ink-soft)">
@@ -63,14 +63,14 @@ export default function RecuperarPasswordPage() {
         )}
 
         {error && (
-          <p role="alert" className="mt-5 text-sm font-medium text-red-600">
+          <p role="alert" className="mt-5 text-sm font-medium text-(--sw-danger)">
             {error}
           </p>
         )}
 
         <Link
           href="/login"
-          className="mt-5 block text-center text-xs font-semibold text-(--sw-ink-soft) hover:text-(--sw-ink) hover:underline"
+          className="mt-3 flex min-h-11 items-center justify-center text-xs font-bold text-(--sw-ink-soft) hover:text-(--sw-ink) hover:underline"
         >
           Volver a iniciar sesion
         </Link>

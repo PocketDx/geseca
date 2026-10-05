@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { api } from "@/lib/api";
-import { ClayButton, ClayCard, ClayField, ClayInput } from "../components/ui/clay";
+import { ClayButton, ClayCard, ClayField, ClayInput, Wordmark } from "../components/ui/clay";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,10 +49,11 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-64px)] max-w-sm flex-col justify-center p-4 sm:p-8">
+    <main className="mx-auto flex min-h-[calc(100svh-4rem)] max-w-md flex-col justify-center px-4 py-8 sm:px-8">
       <ClayCard>
-        <h1 className="text-2xl font-extrabold tracking-tight text-(--sw-ink)">
-          Smart<span className="text-[#5b8fb0]">Wash</span>
+        <p className="sw-eyebrow">Acceso para personal</p>
+        <h1 className="mt-2 text-4xl">
+          <Wordmark />
         </h1>
         <p className="mt-1 text-sm text-(--sw-ink-soft)">
           Ingresa con tu usuario y contrasena.
@@ -73,7 +74,7 @@ export default function LoginPage() {
           </ClayField>
 
           {error && (
-            <p role="alert" className="text-sm font-medium text-red-600">
+            <p role="alert" className="text-sm font-medium text-(--sw-danger)">
               {error}
             </p>
           )}
@@ -85,7 +86,7 @@ export default function LoginPage() {
 
         <Link
           href="/recuperar-password"
-          className="mt-5 block text-center text-xs font-semibold text-(--sw-ink-soft) hover:text-(--sw-ink) hover:underline"
+          className="mt-3 flex min-h-11 items-center justify-center text-xs font-bold text-(--sw-ink-soft) hover:text-(--sw-ink) hover:underline"
         >
           Olvidaste tu contrasena?
         </Link>

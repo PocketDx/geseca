@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser, getTrazabilidad, type TipoUsuarioAuditoria } from "@/lib/api";
-import { ClayCard } from "../components/ui/clay";
+import { ClayCard, Encabezado } from "../components/ui/clay";
 import FiltroTipo from "./filtro-tipo";
 import TablaTrazabilidad from "./tabla-trazabilidad";
 import { TIPOS_USUARIO } from "./tipos";
@@ -25,19 +25,15 @@ export default async function TrazabilidadPage({
   const acciones = await getTrazabilidad(cookieStore, rolValido);
 
   return (
-    <main className="mx-auto max-w-4xl p-4 sm:p-8">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-(--sw-ink)">
-            Trazabilidad
-          </h1>
-          <p className="mt-1 text-sm text-(--sw-ink-soft)">
-            Seguimiento a las acciones de cada tipo de usuario: administrador,
-            recepcionista, operario y cliente.
-          </p>
-        </div>
-        <FiltroTipo tipoActual={rolValido} />
-      </header>
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8 sm:py-12">
+      <Encabezado
+        eyebrow="Administracion · EP05"
+        titulo="Trazabilidad"
+        acciones={<FiltroTipo tipoActual={rolValido} />}
+      >
+        Seguimiento a las acciones de cada tipo de usuario: administrador, recepcionista,
+        operario y cliente.
+      </Encabezado>
 
       {acciones === null ? (
         <ClayCard>

@@ -30,7 +30,7 @@ export default function ActuarComoSelector() {
       onChange={onChange}
       defaultValue=""
       aria-label="Actuar como"
-      className="h-9 w-auto text-xs"
+      className="w-full sm:w-auto"
     >
       <option value="" disabled>
         Actuar como...

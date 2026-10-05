@@ -107,7 +107,7 @@ export default function ClienteForm({
         <ClayInput name="correo" type="email" defaultValue={cliente?.correo} />
       </ClayField>
 
-      <div className="flex items-center gap-3 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <ClayButton type="submit" disabled={pending}>
           {pending ? "Guardando..." : editando ? "Guardar cambios" : "Guardar cliente"}
         </ClayButton>
@@ -122,7 +122,7 @@ export default function ClienteForm({
       </div>
 
       {errores.length > 0 && (
-        <div role="alert" className="clay-sm border-l-4 border-(--sw-peach) p-4 text-sm sm:col-span-2">
+        <div role="alert" className="clay-sm border-l-8 border-l-(--sw-coral) p-4 text-sm sm:col-span-2">
           <p className="font-semibold text-(--sw-ink)">
             No se pudo {editando ? "actualizar" : "registrar"} el cliente
           </p>

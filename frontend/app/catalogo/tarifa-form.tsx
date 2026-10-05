@@ -97,7 +97,7 @@ export default function TarifaForm({
         <ClayInput name="vigente_desde" type="date" required />
       </ClayField>
 
-      <div className="flex items-center gap-3 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <ClayButton type="submit" disabled={pending}>
           {pending ? "Guardando..." : "Agregar tarifa"}
         </ClayButton>

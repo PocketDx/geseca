@@ -19,7 +19,7 @@ export default function TablaClientes({ clientes }: { clientes: Cliente[] }) {
 
   return (
     <ClayCard className="overflow-x-auto p-0">
-      <table className="w-full text-left text-sm">
+      <table className="sw-tabla w-full text-left text-sm">
         <thead>
           <tr className="text-xs font-bold tracking-wide text-(--sw-ink-soft) uppercase">
             <th className="px-5 py-3">Nombre</th>
@@ -34,11 +34,11 @@ export default function TablaClientes({ clientes }: { clientes: Cliente[] }) {
         <tbody>
           {clientes.map((cliente) => (
             <Fragment key={cliente.id}>
-              <tr className="border-t border-(--sw-bg-deep)">
-                <td className="px-5 py-3 font-semibold text-(--sw-ink)">{cliente.nombre_completo}</td>
-                <td className="px-5 py-3 text-(--sw-ink-soft)">{cliente.documento}</td>
-                <td className="px-5 py-3 text-(--sw-ink-soft)">{cliente.telefono}</td>
-                <td className="px-5 py-3">
+              <tr className="border-t border-(--sw-hairline)">
+                <td data-label="Nombre" className="px-5 py-3 font-semibold text-(--sw-ink)">{cliente.nombre_completo}</td>
+                <td data-label="Documento" className="px-5 py-3 text-(--sw-ink-soft)">{cliente.documento}</td>
+                <td data-label="Telefono" className="px-5 py-3 text-(--sw-ink-soft)">{cliente.telefono}</td>
+                <td data-label="Clasificacion" className="px-5 py-3">
                   <ClayBadge color="mint">{cliente.clasificacion}</ClayBadge>
                 </td>
                 <td className="px-5 py-3 text-right">

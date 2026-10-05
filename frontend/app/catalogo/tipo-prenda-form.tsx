@@ -3,18 +3,28 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { crearTipoPrenda } from "@/lib/api";
+import { actualizarTipoPrenda, crearTipoPrenda, type TipoPrenda } from "@/lib/api";
 import { cx } from "@/lib/cx";
 import { ClayButton, ClayField, ClayInput } from "../components/ui/clay";
 import { AlertaErrores, mensajesDeError } from "./errores";
 
 const ETIQUETAS = { nombre: "Nombre", material: "Material" };
 
-export default function TipoPrendaForm({ className }: { className?: string }) {
+export default function TipoPrendaForm({
+  tipoPrenda,
+  onTerminar,
+  className,
+}: {
+  tipoPrenda?: TipoPrenda;
+  onTerminar?: () => void;
+  className?: string;
+}) {
   const router = useRouter();
   const [errores, setErrores] = useState<string[]>([]);
   const [creado, setCreado] = useState(false);
   const [pending, setPending] = useState(false);
+  const editando = tipoPrenda !== undefined;
+  const accion = editando ? "actualizar" : "crear";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,34 +35,57 @@ export default function TipoPrendaForm({ className }: { className?: string }) {
     setCreado(false);
 
     const form = new FormData(formulario);
-    const response = await crearTipoPrenda({
+    const datos = {
       nombre: String(form.get("nombre") ?? "").trim(),
       material: String(form.get("material") ?? "").trim(),
-    }).catch(() => null);
+    };
+    const response = await (
+      tipoPrenda ? actualizarTipoPrenda(tipoPrenda.id, datos) : crearTipoPrenda(datos)
+    ).catch(() => null);
     setPending(false);
 
     if (response?.ok) {
-      formulario.reset();
-      setCreado(true);
+      if (editando) {
+        onTerminar?.();
+      } else {
+        formulario.reset();
+        setCreado(true);
+      }
       router.refresh();
       return;
     }
-    setErrores(await mensajesDeError(response, ETIQUETAS, "No se pudo crear el tipo de prenda"));
+    setErrores(await mensajesDeError(response, ETIQUETAS, `No se pudo ${accion} el tipo de prenda`));
   }
 
   return (
     <form onSubmit={onSubmit} className={cx("grid grid-cols-1 gap-4 sm:grid-cols-2", className)}>
       <ClayField label="Nombre del tipo de prenda">
-        <ClayInput name="nombre" placeholder="Camisa, pantalon, cobija..." maxLength={80} required />
+        <ClayInput
+          name="nombre"
+          defaultValue={tipoPrenda?.nombre}
+          placeholder="Camisa, pantalon, cobija..."
+          maxLength={80}
+          required
+        />
       </ClayField>
       <ClayField label="Material">
-        <ClayInput name="material" placeholder="Algodon, lana..." maxLength={80} />
+        <ClayInput
+          name="material"
+          defaultValue={tipoPrenda?.material}
+          placeholder="Algodon, lana..."
+          maxLength={80}
+        />
       </ClayField>
 
-      <div className="flex items-center gap-3 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <ClayButton type="submit" disabled={pending}>
-          {pending ? "Guardando..." : "Agregar tipo de prenda"}
+          {pending ? "Guardando..." : editando ? "Guardar cambios" : "Agregar tipo de prenda"}
         </ClayButton>
+        {editando && (
+          <ClayButton type="button" variant="secundario" onClick={onTerminar} disabled={pending}>
+            Cancelar
+          </ClayButton>
+        )}
         {creado && (
           <p role="status" className="text-sm text-(--sw-ink-soft)">
             Tipo de prenda creado.
@@ -62,7 +95,7 @@ export default function TipoPrendaForm({ className }: { className?: string }) {
 
       {errores.length > 0 && (
         <div className="sm:col-span-2">
-          <AlertaErrores titulo="No se pudo crear el tipo de prenda" errores={errores} />
+          <AlertaErrores titulo={`No se pudo ${accion} el tipo de prenda`} errores={errores} />
         </div>
       )}
     </form>

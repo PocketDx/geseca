@@ -44,7 +44,7 @@ export default function TablaUsuarios({ usuarios }: { usuarios: UsuarioAdmin[] }
         </div>
       )}
       <ClayCard className="overflow-x-auto p-0">
-        <table className="w-full text-left text-sm">
+        <table className="sw-tabla w-full text-left text-sm">
           <thead>
             <tr className="text-xs font-bold tracking-wide text-(--sw-ink-soft) uppercase">
               <th className="px-5 py-3">Usuario</th>
@@ -56,18 +56,18 @@ export default function TablaUsuarios({ usuarios }: { usuarios: UsuarioAdmin[] }
           <tbody>
             {usuarios.map((usuario) => (
               <Fragment key={usuario.id}>
-                <tr className="border-t border-(--sw-bg-deep)">
-                  <td className="px-5 py-3 font-semibold text-(--sw-ink)">{usuario.username}</td>
-                  <td className="px-5 py-3">
+                <tr className="border-t border-(--sw-hairline)">
+                  <td data-label="Usuario" className="px-5 py-3 font-semibold text-(--sw-ink)">{usuario.username}</td>
+                  <td data-label="Rol" className="px-5 py-3">
                     <ClayBadge>{usuario.rol}</ClayBadge>
                   </td>
-                  <td className="px-5 py-3">
+                  <td data-label="Estado" className="px-5 py-3">
                     <ClayBadge color={usuario.is_active ? "mint" : "peach"}>
                       {usuario.is_active ? "Activo" : "Inactivo"}
                     </ClayBadge>
                   </td>
                   <td className="px-5 py-3">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <Link href={`/usuarios/${usuario.id}/historial`} className={clayBtnClass("secundario")}>
                         Historial
                       </Link>
@@ -92,7 +92,7 @@ export default function TablaUsuarios({ usuarios }: { usuarios: UsuarioAdmin[] }
                   </td>
                 </tr>
                 {editando === usuario.id && (
-                  <tr className="border-t border-(--sw-bg-deep)">
+                  <tr className="border-t border-(--sw-hairline)">
                     <td colSpan={4} className="px-5 py-4">
                       <UsuarioForm usuario={usuario} onTerminar={() => setEditando(null)} />
                     </td>
