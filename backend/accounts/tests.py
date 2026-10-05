@@ -1,4 +1,5 @@
 import re
+import time
 from datetime import datetime, timedelta
 from unittest import mock
 
@@ -20,6 +21,7 @@ class AuthTests(APITestCase):
     """Cubre el contrato de autenticacion por sesion que consume el frontend."""
 
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="recepcion", password="smartwash123", rol=User.Rol.RECEPCIONISTA
         )
@@ -65,6 +67,87 @@ class AuthTests(APITestCase):
         self.client.login(username="recepcion", password="smartwash123")
         self.assertEqual(self.client.post("/api/auth/logout").status_code, 204)
         self.assertEqual(self.client.get("/api/auth/me").status_code, 403)
+
+class LimiteIntentosLoginTests(APITestCase):
+    LOGIN = "/api/auth/login"
+
+    def setUp(self):
+        cache.clear()
+        User.objects.create_user(username="ana", password="smartwash123")
+
+    def intentar(self, username="ana", password="incorrecta"):
+        return self.client.post(
+            self.LOGIN, {"username": username, "password": password}, format="json"
+        )
+
+    def fallar(self, veces, username="ana"):
+        for _ in range(veces):
+            self.intentar(username)
+
+    def test_el_quinto_fallo_consecutivo_bloquea_los_intentos_siguientes(self):
+        self.fallar(4)
+        self.assertEqual(self.intentar().status_code, 401)
+
+        response = self.intentar()
+        self.assertEqual(response.status_code, 429)
+        self.assertIn("15 minutos", response.json()["detail"])
+
+    def test_con_la_cuenta_bloqueada_ni_la_clave_correcta_entra(self):
+        self.fallar(5)
+        response = self.intentar(password="smartwash123")
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(self.client.get("/api/auth/me").status_code, 403)
+
+    def test_el_bloqueo_termina_a_los_15_minutos(self):
+        self.fallar(5)
+        with mock.patch("time.time", return_value=time.time() + 15 * 60 + 1):
+            response = self.intentar(password="smartwash123")
+        self.assertEqual(response.status_code, 200)
+
+    def test_el_bloqueo_sigue_vigente_antes_de_los_15_minutos(self):
+        self.fallar(5)
+        with mock.patch("time.time", return_value=time.time() + 14 * 60):
+            response = self.intentar(password="smartwash123")
+        self.assertEqual(response.status_code, 429)
+
+    def test_un_acierto_reinicia_el_contador(self):
+        self.fallar(4)
+        self.assertEqual(self.intentar(password="smartwash123").status_code, 200)
+        self.client.post("/api/auth/logout")
+
+        self.fallar(4)
+        self.assertEqual(self.intentar(password="smartwash123").status_code, 200)
+
+    def test_una_cuenta_inexistente_se_bloquea_igual_que_una_existente(self):
+        self.fallar(5, username="nadie")
+        inexistente = self.intentar(username="nadie")
+
+        self.fallar(5, username="ana")
+        existente = self.intentar(username="ana")
+
+        self.assertEqual(inexistente.status_code, 429)
+        self.assertEqual(inexistente.status_code, existente.status_code)
+        self.assertEqual(inexistente.json(), existente.json())
+
+    def test_el_bloqueo_de_una_cuenta_no_afecta_a_las_demas(self):
+        User.objects.create_user(username="luis", password="smartwash123")
+        self.fallar(5, username="ana")
+
+        self.assertEqual(self.intentar(username="luis", password="smartwash123").status_code, 200)
+
+    def test_el_bloqueo_no_distingue_mayusculas_ni_espacios(self):
+        self.fallar(3, username="ana")
+        self.fallar(2, username=" ANA ")
+
+        self.assertEqual(self.intentar(username="ana").status_code, 429)
+
+    def test_una_peticion_invalida_no_cuenta_como_fallo(self):
+        for _ in range(6):
+            self.client.post(self.LOGIN, {"username": "ana"}, format="json")
+
+        self.assertEqual(self.intentar(password="smartwash123").status_code, 200)
+
 
 class ActuarComoTests(APITestCase):
     def setUp(self):
