@@ -6,30 +6,11 @@ import {
   getCurrentUser,
   getHistorialUsuario,
   getUsuario,
-  type AccionUsuario,
   type HistorialAccion,
 } from "@/lib/api";
+import { ACCIONES, DIA_ISO, FECHA_LEGIBLE } from "@/lib/auditoria";
 import { ClayBadge, ClayCard } from "../../../components/ui/clay";
 import FiltroFechas from "./filtro-fechas";
-
-// El dia de cada accion se calcula en la hora de Bogota (TIME_ZONE del
-// backend): en UTC, una accion hecha a las 8 p. m. caeria en el dia siguiente
-// y el filtro por fechas la dejaria por fuera.
-const ZONA_HORARIA = "America/Bogota";
-const DIA_ISO = new Intl.DateTimeFormat("en-CA", { timeZone: ZONA_HORARIA });
-const FECHA_LEGIBLE = new Intl.DateTimeFormat("es-CO", {
-  timeZone: ZONA_HORARIA,
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
-const ACCIONES: Record<AccionUsuario, { etiqueta: string; color: "blue" | "mint" | "lavender" | "peach" }> = {
-  creado: { etiqueta: "Creado", color: "blue" },
-  editado: { etiqueta: "Editado", color: "lavender" },
-  activado: { etiqueta: "Activado", color: "mint" },
-  desactivado: { etiqueta: "Desactivado", color: "peach" },
-  inicio_sesion: { etiqueta: "Inicio de sesion", color: "blue" },
-};
 
 function fechaValida(valor?: string): string | undefined {
   return valor && /^\d{4}-\d{2}-\d{2}$/.test(valor) ? valor : undefined;

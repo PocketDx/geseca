@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser, getTrazabilidad, type TipoUsuarioAuditoria } from "@/lib/api";
-import { AvisoPendiente } from "../components/ui/clay";
+import { ClayCard } from "../components/ui/clay";
 import FiltroTipo from "./filtro-tipo";
 import TablaTrazabilidad from "./tabla-trazabilidad";
 import { TIPOS_USUARIO } from "./tipos";
@@ -15,6 +15,7 @@ export default async function TrazabilidadPage({
   const cookieStore = await cookies();
   const user = await getCurrentUser(cookieStore);
   if (!user) redirect("/login");
+  if (user.rol !== "administrador") redirect("/");
 
   const { rol } = await searchParams;
   const rolValido = TIPOS_USUARIO.some((t) => t.valor === rol)
@@ -39,13 +40,11 @@ export default async function TrazabilidadPage({
       </header>
 
       {acciones === null ? (
-        <AvisoPendiente>
-          GET /api/usuarios/trazabilidad todavia no existe: el backend no
-          tiene modelo de auditoria (lo mismo que bloquea a HU04, el
-          historial por usuario). Esta pantalla ya esta lista para listar y
-          filtrar por tipo de usuario (?rol=administrador|recepcionista|
-          operario|cliente) en cuanto exista el endpoint.
-        </AvisoPendiente>
+        <ClayCard>
+          <p className="text-sm text-(--sw-ink-soft)">
+            No se pudo cargar la trazabilidad. Verifica que el backend este en ejecucion.
+          </p>
+        </ClayCard>
       ) : (
         <TablaTrazabilidad acciones={acciones} />
       )}

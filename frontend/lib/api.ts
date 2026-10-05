@@ -235,7 +235,7 @@ export type AccionAuditoria = {
   usuario_id: number | null;
   usuario: string;
   tipo_usuario: TipoUsuarioAuditoria;
-  accion: string;
+  accion: AccionUsuario;
   detalle: string;
   fecha: string;
 };
