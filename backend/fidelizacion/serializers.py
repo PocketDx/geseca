@@ -20,9 +20,18 @@ class ReglaDescuentoSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         tipo = attrs.get("tipo", getattr(self.instance, "tipo", None))
         valor = attrs.get("valor", getattr(self.instance, "valor", None))
+        if valor is not None and valor < 0:
+            raise serializers.ValidationError({"valor": "El valor del descuento no puede ser negativo."})
         if tipo == ReglaDescuento.Tipo.PORCENTAJE and valor is not None and valor > 100:
             raise serializers.ValidationError(
                 {"valor": "Un descuento porcentual no puede superar el 100% del valor de la orden."}
+            )
+
+        desde = attrs.get("vigente_desde", getattr(self.instance, "vigente_desde", None))
+        hasta = attrs.get("vigente_hasta", getattr(self.instance, "vigente_hasta", None))
+        if desde and hasta and hasta <= desde:
+            raise serializers.ValidationError(
+                {"vigente_hasta": "La vigencia debe terminar despues de la fecha de inicio."}
             )
         return attrs
 
