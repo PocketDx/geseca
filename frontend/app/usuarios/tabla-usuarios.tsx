@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
-import { desactivarUsuario, type UsuarioAdmin } from "@/lib/api";
+import { activarUsuario, desactivarUsuario, type UsuarioAdmin } from "@/lib/api";
 import { ClayBadge, ClayCard, clayBtnClass } from "../components/ui/clay";
 import { AlertaErrores, mensajesDeError } from "./errores";
 import UsuarioForm from "./usuario-form";
@@ -14,18 +14,21 @@ export default function TablaUsuarios({ usuarios }: { usuarios: UsuarioAdmin[] }
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [editando, setEditando] = useState<number | null>(null);
   const [errores, setErrores] = useState<string[]>([]);
+  const [accionFallida, setAccionFallida] = useState("desactivar");
 
-  async function onDesactivar(id: number) {
+  async function cambiarEstado(id: number, activar: boolean) {
+    const accion = activar ? "activar" : "desactivar";
     setOcupado(id);
     setErrores([]);
-    const response = await desactivarUsuario(id).catch(() => null);
+    const response = await (activar ? activarUsuario : desactivarUsuario)(id).catch(() => null);
     setOcupado(null);
 
     if (response?.ok) {
       router.refresh();
       return;
     }
-    setErrores(await mensajesDeError(response, "desactivar el usuario"));
+    setAccionFallida(accion);
+    setErrores(await mensajesDeError(response, `${accion} el usuario`));
   }
 
   if (usuarios.length === 0) {
@@ -40,7 +43,7 @@ export default function TablaUsuarios({ usuarios }: { usuarios: UsuarioAdmin[] }
     <>
       {errores.length > 0 && (
         <div className="mb-4">
-          <AlertaErrores titulo="No se pudo desactivar el usuario" mensajes={errores} />
+          <AlertaErrores titulo={`No se pudo ${accionFallida} el usuario`} mensajes={errores} />
         </div>
       )}
       <ClayCard className="overflow-x-auto p-0">
@@ -78,16 +81,14 @@ export default function TablaUsuarios({ usuarios }: { usuarios: UsuarioAdmin[] }
                       >
                         Editar
                       </button>
-                      {usuario.is_active && (
-                        <button
-                          type="button"
-                          onClick={() => onDesactivar(usuario.id)}
-                          disabled={ocupado === usuario.id}
-                          className={clayBtnClass("secundario")}
-                        >
-                          {ocupado === usuario.id ? "..." : "Desactivar"}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => cambiarEstado(usuario.id, !usuario.is_active)}
+                        disabled={ocupado === usuario.id}
+                        className={clayBtnClass("secundario")}
+                      >
+                        {ocupado === usuario.id ? "..." : usuario.is_active ? "Desactivar" : "Activar"}
+                      </button>
                     </div>
                   </td>
                 </tr>

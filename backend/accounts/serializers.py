@@ -84,7 +84,7 @@ class UsuarioInternoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "username", "email", "first_name", "last_name", "rol", "is_active", "password")
-        read_only_fields = ("is_active",)  # se cambia solo via el endpoint de desactivar
+        read_only_fields = ("is_active",)  # se cambia solo via los endpoints de activar y desactivar
 
     def validate(self, attrs):
         password = attrs.get("password")
