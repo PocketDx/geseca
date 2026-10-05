@@ -24,7 +24,7 @@ export default function TablaOrdenes({ ordenes }: { ordenes: Orden[] }) {
 
   return (
     <ClayCard className="overflow-x-auto p-0">
-      <table className="w-full text-left text-sm">
+      <table className="sw-tabla w-full text-left text-sm">
         <thead>
           <tr className="text-xs font-bold tracking-wide text-(--sw-ink-soft) uppercase">
             <th className="px-5 py-3">Codigo</th>
@@ -35,13 +35,13 @@ export default function TablaOrdenes({ ordenes }: { ordenes: Orden[] }) {
         </thead>
         <tbody>
           {ordenes.map((orden) => (
-            <tr key={orden.id} className="border-t border-(--sw-bg-deep)">
-              <td className="px-5 py-3 font-semibold text-(--sw-ink)">{orden.codigo}</td>
-              <td className="px-5 py-3">
+            <tr key={orden.id} className="border-t border-(--sw-hairline)">
+              <td data-label="Codigo" className="px-5 py-3 font-semibold text-(--sw-ink)">{orden.codigo}</td>
+              <td data-label="Estado" className="px-5 py-3">
                 <ClayBadge color={COLOR_ESTADO[orden.estado]}>{orden.estado}</ClayBadge>
               </td>
-              <td className="px-5 py-3 text-(--sw-ink-soft)">{orden.estado_pago}</td>
-              <td className="px-5 py-3 font-semibold text-(--sw-ink) tabular-nums">
+              <td data-label="Pago" className="px-5 py-3 text-(--sw-ink-soft)">{orden.estado_pago}</td>
+              <td data-label="Total" className="px-5 py-3 font-semibold text-(--sw-ink) tabular-nums">
                 {formatCOP(orden.valor_total)}
               </td>
             </tr>

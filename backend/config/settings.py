@@ -7,6 +7,7 @@ ponytail: sin split base/dev/prod; el unico eje que varia hoy es DEBUG.
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 import os
 
@@ -18,9 +19,16 @@ def env_list(name, default=""):
     return [v.strip() for v in os.getenv(name, default).split(",") if v.strip()]
 
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-insecure-cambiar-en-produccion")
+INSECURE_SECRET_KEY = "dev-insecure-cambiar-en-produccion"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", INSECURE_SECRET_KEY)
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+
+if not DEBUG and SECRET_KEY == INSECURE_SECRET_KEY:
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY no esta definida. Con DEBUG=False es obligatoria: "
+        "sin ella las sesiones y los tokens CSRF serian falsificables."
+    )
 
 # El navegador habla con Next.js, que reenvia a Django via rewrite; el header
 # Origin sigue siendo el del frontend, asi que Django debe confiar en el.
@@ -48,6 +56,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -103,6 +112,10 @@ REST_FRAMEWORK = {
     ],
     # drf
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_RATES": {
+        "recuperar-password": "5/hour",
+        "recuperar-password-cuenta": "3/hour",
+    },
 }
 
 SPECTACULAR_SETTINGS = {
@@ -118,7 +131,31 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    },
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+PASSWORD_RESET_TIMEOUT = 60 * 60
+# Base de los enlaces que Django envia por correo (apuntan a paginas de Next.js).
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+
+# * En desarrollo el correo se imprime en la consola de runserver; para enviarlo
+# * de verdad basta con apuntar EMAIL_BACKEND al de SMTP desde el .env.
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", "SmartWash <no-reply@smartwash.local>"
+)
 
 # En produccion el frontend y el backend viven en dominios distintos.
 SESSION_COOKIE_SECURE = not DEBUG

@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { solicitarRecuperacionPassword } from "@/lib/api";
-import { AvisoPendiente, ClayButton, ClayCard, ClayField, ClayInput } from "../components/ui/clay";
+import { ClayButton, ClayCard, ClayField, ClayInput, clayBtnClass } from "../components/ui/clay";
 
 export default function RecuperarPasswordPage() {
   const [enviado, setEnviado] = useState(false);
-  const [pendiente, setPendiente] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
     setPending(true);
 
     const form = new FormData(event.currentTarget);
@@ -21,21 +22,19 @@ export default function RecuperarPasswordPage() {
     const response = await solicitarRecuperacionPassword(identificador).catch(() => null);
     setPending(false);
 
-    // HU02 (SCRUM): falta el backend de correo (ver plot.md, "Pendiente").
-    // /api/auth/recuperar-password todavia no existe, asi que cualquier
-    // respuesta que no sea 2xx se trata igual: la pantalla esta lista, el
-    // envio real llega cuando exista el endpoint.
     if (response?.ok) {
       setEnviado(true);
+    } else if (response?.status === 429) {
+      setError("Demasiadas solicitudes. Espera un momento antes de intentarlo de nuevo.");
     } else {
-      setPendiente(true);
+      setError("No se pudo enviar la solicitud. Intenta de nuevo.");
     }
   }
 
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-64px)] max-w-sm flex-col justify-center p-4 sm:p-8">
+    <main className="mx-auto flex min-h-[calc(100svh-4rem)] max-w-md flex-col justify-center px-4 py-8 sm:px-8">
       <ClayCard>
-        <h1 className="text-xl font-extrabold tracking-tight text-(--sw-ink)">
+        <h1 className="font-sans text-3xl font-black tracking-[-0.04em] text-(--sw-ink)">
           Recuperar contrasena
         </h1>
         <p className="mt-1 text-sm text-(--sw-ink-soft)">
@@ -52,25 +51,26 @@ export default function RecuperarPasswordPage() {
               <ClayInput name="identificador" autoComplete="username" required />
             </ClayField>
 
-            <ClayButton type="submit" disabled={pending} className="mt-1 w-full">
-              {pending ? "Enviando..." : "Enviar instrucciones"}
-            </ClayButton>
+            <div className="mt-1 flex gap-3">
+              <Link href="/login" className={clayBtnClass("secundario") + " flex-1"}>
+                Cancelar
+              </Link>
+              <ClayButton type="submit" disabled={pending} className="flex-1">
+                {pending ? "Enviando..." : "Enviar instrucciones"}
+              </ClayButton>
+            </div>
           </form>
         )}
 
-        {pendiente && (
-          <div className="mt-5">
-            <AvisoPendiente>
-              La recuperacion por correo (HU02) todavia no tiene backend de email
-              conectado. Este formulario ya esta listo: en cuanto exista
-              POST /api/auth/recuperar-password, empieza a funcionar sin cambios aqui.
-            </AvisoPendiente>
-          </div>
+        {error && (
+          <p role="alert" className="mt-5 text-sm font-medium text-(--sw-danger)">
+            {error}
+          </p>
         )}
 
         <Link
           href="/login"
-          className="mt-5 block text-center text-xs font-semibold text-(--sw-ink-soft) hover:text-(--sw-ink) hover:underline"
+          className="mt-3 flex min-h-11 items-center justify-center text-xs font-bold text-(--sw-ink-soft) hover:text-(--sw-ink) hover:underline"
         >
           Volver a iniciar sesion
         </Link>

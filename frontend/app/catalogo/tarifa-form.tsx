@@ -1,10 +1,21 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { crearTarifa, type Servicio, type TipoPrenda } from "@/lib/api";
 import { cx } from "@/lib/cx";
-import { AvisoPendiente, ClayButton, ClayField, ClayInput, ClaySelect } from "../components/ui/clay";
+import { ClayButton, ClayField, ClayInput, ClaySelect } from "../components/ui/clay";
+import { AlertaErrores, mensajesDeError } from "./errores";
+
+export const ETIQUETAS_TARIFA = {
+  tipo_prenda: "Tipo de prenda",
+  servicio: "Servicio",
+  valor: "Valor",
+  plazo_entrega_dias: "Plazo de entrega",
+  vigente_desde: "Vigente desde",
+  vigente_hasta: "Vigente hasta",
+};
 
 export default function TarifaForm({
   tiposPrenda,
@@ -15,16 +26,20 @@ export default function TarifaForm({
   servicios: Servicio[];
   className?: string;
 }) {
-  const [pendiente, setPendiente] = useState(false);
+  const router = useRouter();
+  const [errores, setErrores] = useState<string[]>([]);
+  const [creada, setCreada] = useState(false);
   const [pending, setPending] = useState(false);
-  const sinCatalogo = tiposPrenda.length === 0 || servicios.length === 0;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // currentTarget queda en null despues del await.
+    const formulario = event.currentTarget;
     setPending(true);
-    setPendiente(false);
+    setErrores([]);
+    setCreada(false);
 
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formulario);
     const response = await crearTarifa({
       tipo_prenda: Number(form.get("tipo_prenda")),
       servicio: Number(form.get("servicio")),
@@ -36,22 +51,19 @@ export default function TarifaForm({
     setPending(false);
 
     if (response?.ok) {
-      event.currentTarget.reset();
-    } else {
-      setPendiente(true);
+      formulario.reset();
+      setCreada(true);
+      router.refresh();
+      return;
     }
+    setErrores(await mensajesDeError(response, ETIQUETAS_TARIFA, "No se pudo crear la tarifa"));
   }
 
-  // Sin tipos de prenda ni servicios no hay de donde elegir: mostramos el
-  // aviso en vez de un formulario con selects vacios.
-  if (sinCatalogo) {
+  if (tiposPrenda.length === 0 || servicios.length === 0) {
     return (
-      <AvisoPendiente>
-        GET /api/catalogo/tipos-prenda y /api/catalogo/servicios todavia no
-        existen: sin ellos no hay de donde elegir tipo de prenda ni servicio
-        para una tarifa nueva. El formulario aparece en cuanto esos endpoints
-        respondan.
-      </AvisoPendiente>
+      <p className="text-sm text-(--sw-ink-soft)">
+        Para crear una tarifa primero registra al menos un tipo de prenda y un servicio.
+      </p>
     );
   }
 
@@ -85,18 +97,20 @@ export default function TarifaForm({
         <ClayInput name="vigente_desde" type="date" required />
       </ClayField>
 
-      <div className="sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <ClayButton type="submit" disabled={pending}>
           {pending ? "Guardando..." : "Agregar tarifa"}
         </ClayButton>
+        {creada && (
+          <p role="status" className="text-sm text-(--sw-ink-soft)">
+            Tarifa creada.
+          </p>
+        )}
       </div>
 
-      {pendiente && (
+      {errores.length > 0 && (
         <div className="sm:col-span-2">
-          <AvisoPendiente>
-            POST /api/catalogo/tarifas todavia no existe. El formulario queda
-            listo para HU07.
-          </AvisoPendiente>
+          <AlertaErrores titulo="No se pudo crear la tarifa" errores={errores} />
         </div>
       )}
     </form>

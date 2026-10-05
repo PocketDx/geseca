@@ -20,7 +20,7 @@ export default function FiltroTipo({ tipoActual }: { tipoActual?: TipoUsuarioAud
       onChange={onChange}
       defaultValue={tipoActual ?? ""}
       aria-label="Filtrar por tipo de usuario"
-      className="h-9 w-auto text-xs"
+      className="w-full sm:w-auto"
     >
       <option value="">Todos los tipos de usuario</option>
       {TIPOS_USUARIO.map((tipo) => (

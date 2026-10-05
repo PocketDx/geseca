@@ -61,6 +61,21 @@ export async function api(
   });
 }
 
+/** Errores de validacion de DRF por campo. `detail` llega en 403/404 y similares;
+ * una respuesta que no es JSON (p. ej. un 500 con HTML) devuelve un objeto vacio. */
+export type ErroresApi = Record<string, string[]>;
+
+export async function leerErroresApi(response: Response): Promise<ErroresApi> {
+  const data: unknown = await response.json().catch(() => null);
+  if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+  return Object.fromEntries(
+    Object.entries(data).map(([campo, valor]) => [
+      campo,
+      Array.isArray(valor) ? valor.map(String) : [String(valor)],
+    ]),
+  );
+}
+
 /** Usuario autenticado leido desde un Server Component, o null si no hay sesion.
  *
  * Devuelve null tambien si el backend no responde. Sin esto, un Django caido
@@ -96,14 +111,9 @@ export async function actuarComo(username: string): Promise<User | null> {
   return response.ok ? ((await response.json()) as User) : null;
 }
 
-/* --------------------------------------------------------------------------
- * Lo de aqui abajo consume endpoints que todavia no existen en el backend
- * (clientes/, catalogo/ y ordenes/ solo tienen modelos; fidelizacion/ ni
- * siquiera existe como app). Las rutas y formas de datos son las que se
- * acordaron en el modelo de plot.md; cuando alguien implemente el endpoint
- * en Django, esta capa deja de devolver null sin que el resto del frontend
- * cambie.
- * -------------------------------------------------------------------------- */
+/* Clientes, catalogo, fidelizacion, usuarios y auditoria ya tienen endpoints en
+ * Django. Ordenes, rastreo publico y PQRS todavia no: sus funciones devuelven
+ * null o fallan sin romper la pantalla. */
 
 /** GET server-side generico: reenvia cookies y nunca lanza. Un backend caido
  * y un endpoint que aun no existe (404) se ven igual desde la pagina: null. */
@@ -170,6 +180,13 @@ export async function getUsuarios(cookieStore: CookieStore): Promise<UsuarioAdmi
   return fetchBackend<UsuarioAdmin[]>("/usuarios", cookieStore);
 }
 
+export async function getUsuario(
+  id: number,
+  cookieStore: CookieStore,
+): Promise<UsuarioAdmin | null> {
+  return fetchBackend<UsuarioAdmin>(`/usuarios/${id}`, cookieStore);
+}
+
 export async function crearUsuario(datos: UsuarioFormulario): Promise<Response> {
   return api("/usuarios", { method: "POST", body: datos });
 }
@@ -185,9 +202,11 @@ export async function desactivarUsuario(id: number): Promise<Response> {
   return api(`/usuarios/${id}/desactivar`, { method: "POST" });
 }
 
+export type AccionUsuario = "creado" | "editado" | "activado" | "desactivado" | "inicio_sesion";
+
 export type HistorialAccion = {
   id: number;
-  accion: string;
+  accion: AccionUsuario;
   detalle: string;
   fecha: string;
 };
@@ -211,7 +230,7 @@ export type AccionAuditoria = {
   usuario_id: number | null;
   usuario: string;
   tipo_usuario: TipoUsuarioAuditoria;
-  accion: string;
+  accion: AccionUsuario;
   detalle: string;
   fecha: string;
 };
@@ -231,12 +250,16 @@ export type Servicio = { id: number; nombre: string; descripcion: string };
 export type Tarifa = {
   id: number;
   tipo_prenda: number;
+  tipo_prenda_nombre: string;
   servicio: number;
+  servicio_nombre: string;
   valor: string;
   plazo_entrega_dias: number;
   vigente_desde: string;
   vigente_hasta: string | null;
 };
+
+export type TarifaFormulario = Omit<Tarifa, "id" | "tipo_prenda_nombre" | "servicio_nombre">;
 
 export async function getTiposPrenda(cookieStore: CookieStore): Promise<TipoPrenda[] | null> {
   return fetchBackend<TipoPrenda[]>("/catalogo/tipos-prenda", cookieStore);
@@ -246,21 +269,45 @@ export async function getServicios(cookieStore: CookieStore): Promise<Servicio[]
   return fetchBackend<Servicio[]>("/catalogo/servicios", cookieStore);
 }
 
-export async function getTarifas(cookieStore: CookieStore): Promise<Tarifa[] | null> {
-  return fetchBackend<Tarifa[]>("/catalogo/tarifas", cookieStore);
+export async function getTarifas(
+  cookieStore: CookieStore,
+  soloVigentes = false,
+): Promise<Tarifa[] | null> {
+  return fetchBackend<Tarifa[]>(
+    `/catalogo/tarifas${soloVigentes ? "?vigentes=1" : ""}`,
+    cookieStore,
+  );
+}
+
+export async function crearTipoPrenda(datos: Omit<TipoPrenda, "id">): Promise<Response> {
+  return api("/catalogo/tipos-prenda", { method: "POST", body: datos });
 }
 
 export async function crearServicio(datos: Omit<Servicio, "id">): Promise<Response> {
   return api("/catalogo/servicios", { method: "POST", body: datos });
 }
 
-export async function crearTarifa(datos: Omit<Tarifa, "id">): Promise<Response> {
+export async function actualizarTipoPrenda(
+  id: number,
+  datos: Partial<Omit<TipoPrenda, "id">>,
+): Promise<Response> {
+  return api(`/catalogo/tipos-prenda/${id}`, { method: "PATCH", body: datos });
+}
+
+export async function actualizarServicio(
+  id: number,
+  datos: Partial<Omit<Servicio, "id">>,
+): Promise<Response> {
+  return api(`/catalogo/servicios/${id}`, { method: "PATCH", body: datos });
+}
+
+export async function crearTarifa(datos: TarifaFormulario): Promise<Response> {
   return api("/catalogo/tarifas", { method: "POST", body: datos });
 }
 
 export async function actualizarTarifa(
   id: number,
-  datos: Partial<Omit<Tarifa, "id">>,
+  datos: Partial<TarifaFormulario>,
 ): Promise<Response> {
   return api(`/catalogo/tarifas/${id}`, { method: "PATCH", body: datos });
 }
@@ -303,6 +350,17 @@ export async function solicitarRecuperacionPassword(identificador: string): Prom
   return api("/auth/recuperar-password", {
     method: "POST",
     body: { identificador },
+  });
+}
+
+export async function confirmarRecuperacionPassword(
+  uid: string,
+  token: string,
+  password: string,
+): Promise<Response> {
+  return api("/auth/confirmar-recuperacion", {
+    method: "POST",
+    body: { uid, token, password },
   });
 }
 
