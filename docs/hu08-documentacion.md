@@ -9,7 +9,7 @@
 | Sección | Responsable | Estado |
 |---|---|---|
 | 1. Backend | Juan Daniel Torres Morales | ✅ Completo |
-| 2. Frontend | Dairo Javier Rodríguez Gómez | ⬜ Pendiente |
+| 2. Frontend | Dairo Javier Rodríguez Gómez | ✅ Completo |
 
 ---
 
@@ -61,10 +61,52 @@ El tipo `ReglaDescuento` de `frontend/lib/api.ts` coincide campo por campo, incl
 ---
 
 ## 2. Frontend
-*(Responsable: Dairo Javier Rodríguez Gómez — completar con lo entregado en HU08 [Desarrollo Frontend], SCRUM-75)*
 
-- **Resumen:**
-- **Decisiones de diseño/implementación:**
-- **Pantallas entregadas:** (nombre de cada pantalla/componente, qué permite hacer, capturas si aplica)
-- **Desviaciones frente a la especificación original:**
+**Responsable:** Dairo Javier Rodríguez Gómez · **Subtarea:** SCRUM-75
+**PR:** esqueleto de la pantalla en el #18, y conexión con el backend en el #30.
 
+### Resumen
+
+La pantalla `/fidelizacion` permite al administrador crear reglas de descuento y ver las que existen. Consume los endpoints de la sección 1 a través de `frontend/lib/api.ts`. Editar una regla desde la pantalla quedó fuera de alcance por decisión del equipo.
+
+### Decisiones tomadas
+
+- **Solo el administrador entra.** La página es un Server Component que lee el usuario con `getCurrentUser`. Sin sesión redirige a `/login`, y con otro rol redirige a `/`. El enlace "Fidelizacion" de la barra de navegación y el acceso de la página de inicio solo se muestran al administrador.
+- **Crear y listar, sin editar.** El formulario solo crea. La lista es de lectura. No hay botón para activar, desactivar ni modificar una regla ya creada.
+- **El formulario ayuda a respetar el tope antes de enviar.** El campo `valor` cambia de etiqueta según el tipo (`Valor (%)` o `Valor (COP)`) y su `max` es 100 para `porcentaje` y 99 999 999,99 para `monto_fijo`, que es lo que admite `DecimalField(10, 2)`. La validación definitiva sigue siendo la del backend.
+- **Los errores salen del backend.** `leerErroresApi` convierte el `400` de DRF en una lista, y cada mensaje de campo se antepone con su etiqueta (por ejemplo, `Valor: Un descuento porcentual no puede superar el 100% del valor de la orden.`). Si el backend no responde se muestra "No se pudo conectar con el servidor", y si responde sin cuerpo legible, "No se pudo crear la regla (error N)".
+- **Tras crear, el formulario se limpia y la tabla se refresca.** Se guarda la referencia al formulario antes del `await` (después de él, `event.currentTarget` es `null` y `reset()` fallaba) y se llama a `router.refresh()` para que la tabla incluya la regla nueva sin recargar la página. Se muestra "Regla creada."
+- **Si el listado falla, el formulario sigue disponible.** Cuando `getReglasDescuento` devuelve `null` (backend caído o respuesta no válida), en lugar de la tabla aparece un aviso para verificar que el backend esté en ejecución.
+
+### Pantallas entregadas
+
+| Pantalla | Archivo | Qué permite |
+|---|---|---|
+| Fidelización | `frontend/app/fidelizacion/page.tsx` | Controla el acceso, carga las reglas y compone el formulario y la tabla |
+| Nueva regla de descuento | `frontend/app/fidelizacion/regla-form.tsx` | Crea una regla con `POST /api/fidelizacion/reglas-descuento` |
+| Tabla de reglas | `frontend/app/fidelizacion/tabla-reglas.tsx` | Lista las reglas en el orden en que las entrega el backend |
+
+**Formulario.**
+
+| Campo | Control | Notas |
+|---|---|---|
+| Nombre de la regla | Texto | Obligatorio |
+| Tipo | Selector | `Porcentaje` o `Monto fijo` |
+| Valor | Número, paso 0,01, mínimo 0 | Obligatorio; el máximo depende del tipo |
+| Clasificación del cliente | Selector | `Cualquiera` (se envía vacío), `Ocasional`, `Frecuente` o `VIP` |
+| Vigente desde | Fecha | Obligatorio |
+| Activa desde que se crea | Casilla | Marcada por defecto |
+
+**Tabla.** Columnas Regla, Valor, Aplica a, Desde y Estado:
+- el valor se muestra como porcentaje o en pesos (`formatCOP`);
+- "Aplica a" muestra la clasificación, o "Cualquier cliente" si está vacía;
+- el estado es una etiqueta "Activa" o "Inactiva";
+- sin reglas, muestra "Todavia no hay reglas de descuento."
+
+### Desviaciones frente a la especificación
+
+- **No se pueden editar las reglas desde la pantalla.** Fue una decisión del equipo (SCRUM-75). El backend sí acepta `PATCH` y `actualizarReglaDescuento` existe en `frontend/lib/api.ts`, pero ninguna pantalla la usa. Una consecuencia directa: una regla no se puede desactivar desde la interfaz, porque `activa` solo se fija al crearla. Para apagar una regla hay que llamar al `PATCH` del API.
+- **No hay botón Cancelar.** El escenario 2 pide que, al cancelar, se descarten los datos y no cambie nada. El formulario no guarda nada hasta que se pulsa "Crear regla", así que salir de la pantalla descarta lo escrito, pero no hay un control explícito de cancelar.
+- **La vigencia final no se puede definir.** El formulario siempre envía `vigente_hasta: null`, aunque el backend lo acepta y lo valida. La tabla tampoco lo muestra: solo aparece "Desde". Una regla creada desde la pantalla no tiene fecha de fin.
+- **El control de acceso es solo de interfaz.** Redirigir al no administrador evita que vea la pantalla, pero el API acepta cualquier sesión (ver los pendientes de la sección 1). Lo resuelve T8 (SCRUM-57).
+- **La pantalla no dice que la regla todavía no se aplica.** La regla queda disponible, como pide el escenario 1, pero ninguna orden la usa hasta que se haga HU09.
