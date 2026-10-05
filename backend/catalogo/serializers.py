@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Q
 from rest_framework import serializers
 
 from .models import Servicio, TipoPrenda, Tarifa
@@ -96,7 +97,35 @@ class TarifaSerializer(ConAutoriaSerializer):
                         f"vigente ({vigente.vigente_desde})."
                     }
                 )
+
+        cruzada = self._tarifa_cruzada(attrs, desde, hasta, vigente if hasta is None else None)
+        if cruzada is not None:
+            hasta_cruzada = cruzada.vigente_hasta or "hoy en adelante"
+            raise serializers.ValidationError(
+                {
+                    "vigente_desde": "El periodo se cruza con otra tarifa de esta prenda y "
+                    f"servicio ({cruzada.vigente_desde} a {hasta_cruzada})."
+                }
+            )
         return attrs
+
+    def _tarifa_cruzada(self, attrs, desde, hasta, a_cerrar):
+        """Rangos [desde, hasta), con hasta vacio como infinito. La vigente que
+        una tarifa nueva abierta va a cerrar no cuenta como cruce."""
+        tipo_prenda = attrs.get("tipo_prenda", getattr(self.instance, "tipo_prenda", None))
+        servicio = attrs.get("servicio", getattr(self.instance, "servicio", None))
+        otras = Tarifa.objects.filter(tipo_prenda=tipo_prenda, servicio=servicio)
+        if self.instance is not None:
+            otras = otras.exclude(pk=self.instance.pk)
+        if self.instance is None and a_cerrar is not None:
+            otras = otras.exclude(pk=a_cerrar.pk)
+        if hasta is not None:
+            otras = otras.filter(vigente_desde__lt=hasta)
+        return (
+            otras.filter(Q(vigente_hasta__isnull=True) | Q(vigente_hasta__gt=desde))
+            .order_by("vigente_desde")
+            .first()
+        )
 
     def _tarifa_vigente(self, attrs):
         tipo_prenda = attrs.get("tipo_prenda", getattr(self.instance, "tipo_prenda", None))
