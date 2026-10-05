@@ -111,6 +111,31 @@ class ReglaDescuentoApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_rechaza_un_valor_negativo_con_mensaje_y_no_con_error_500(self):
+        response = self.client.post(
+            "/api/fidelizacion/reglas-descuento", self.datos_validos(valor="-5")
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("valor", response.json())
+        self.assertFalse(ReglaDescuento.objects.exists())
+
+    def test_rechaza_una_vigencia_que_termina_antes_de_empezar(self):
+        response = self.client.post(
+            "/api/fidelizacion/reglas-descuento",
+            self.datos_validos(vigente_desde="2026-06-01", vigente_hasta="2026-01-01"),
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("vigente_hasta", response.json())
+
+    def test_editar_solo_el_fin_de_vigencia_a_una_fecha_anterior_se_rechaza(self):
+        creacion = self.client.post("/api/fidelizacion/reglas-descuento", self.datos_validos())
+        response = self.client.patch(
+            f"/api/fidelizacion/reglas-descuento/{creacion.json()['id']}",
+            {"vigente_hasta": "2025-12-31"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_requiere_sesion_activa(self):
         self.client.logout()
         response = self.client.post("/api/fidelizacion/reglas-descuento", self.datos_validos())
