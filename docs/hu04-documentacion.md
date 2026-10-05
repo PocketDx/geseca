@@ -9,7 +9,7 @@
 | Sección | Responsable | Estado |
 |---|---|---|
 | 1. Backend | Juan Daniel Torres Morales | ✅ Completo |
-| 2. Frontend | sebastianij | ⬜ Pendiente |
+| 2. Frontend | sebastianij | ✅ Completo |
 
 ---
 
@@ -61,10 +61,40 @@ Cada inicio de sesión y cada cambio sobre una cuenta interna queda en el modelo
 ---
 
 ## 2. Frontend
-*(Responsable: sebastianij — completar con lo entregado en HU04 [Desarrollo Frontend], SCRUM-67)*
 
-- **Resumen:**
-- **Decisiones de diseño/implementación:**
-- **Pantallas entregadas:** (nombre de cada pantalla/componente, qué permite hacer, capturas si aplica)
-- **Desviaciones frente a la especificación original:**
+**Autor:** sebastianij · **Subtarea:** SCRUM-67
+**PR:** #29 (historial por usuario) y #33 (trazabilidad legible y solo para administrador).
 
+### Resumen
+
+Dos pantallas de solo consulta, ambas exclusivas del administrador, que leen los endpoints de la sección 1: el historial de un usuario (`/usuarios/{id}/historial`) y la trazabilidad global (`/trazabilidad`). Comparten el módulo `frontend/lib/auditoria.ts`, así que muestran las acciones y las fechas de la misma forma.
+
+### Decisiones tomadas
+
+- **Solo consulta.** Ninguna de las dos pantallas ofrece editar ni borrar: los registros de auditoría son inmutables (regla de negocio de la historia).
+- **Un módulo compartido, `lib/auditoria.ts`.** Exporta `ACCIONES` (etiqueta y color de cada acción), `FECHA_LEGIBLE` y `DIA_ISO`. En #33 se movió ahí lo que vivía dentro de la página del historial, para que la trazabilidad no repita ni se desvíe de esas reglas.
+- **Etiquetas legibles para la acción.** `ACCIONES` cubre las cinco acciones del backend: Creado, Editado, Activado, Desactivado e Inicio de sesión. Si llegara una acción desconocida, la tabla muestra el valor tal cual.
+- **Fecha en `America/Bogota`.** `FECHA_LEGIBLE` formatea con `es-CO` (fecha y hora cortas) en la zona del `TIME_ZONE` del backend, en lugar de mostrar el ISO en crudo. `DIA_ISO` calcula el día en la misma zona, porque en UTC una acción hecha a las 8 p. m. caería en el día siguiente y el filtro por fechas la dejaría por fuera.
+- **El filtro por fechas se aplica en el navegador.** El endpoint del historial no recibe fechas, así que la página trae la lista completa y filtra por día, con ambos extremos incluidos. Las fechas viajan en la URL (`?desde=&hasta=`) y un valor que no sea `AAAA-MM-DD` se ignora.
+- **El filtro de la trazabilidad es del lado del servidor.** Elegir un tipo de usuario navega a `/trazabilidad?rol=...` y la página pide `GET /api/usuarios/trazabilidad?rol=...`. Un `rol` que no esté en la lista se ignora y se muestran todos los tipos.
+- **Solo el administrador entra.** Ambas páginas, en el servidor, redirigen a `/login` si no hay sesión y a `/` si el rol no es `administrador`. En la barra de navegación y en el inicio, el acceso a Trazabilidad solo aparece para ese rol.
+- **Escenario "sin resultados" con dos mensajes.** En el historial, si el usuario no tiene acciones se muestra "Este usuario no tiene acciones registradas."; si las tiene pero el filtro no deja ninguna, "No hay registros para el filtro aplicado.". En la trazabilidad, una lista vacía muestra "No hay acciones registradas para este filtro.".
+- **Error de conexión en lugar de aviso de "pendiente".** Se quitaron los avisos de "backend pendiente" (en #33, el de que el backend no tenía modelo de auditoría). Si la petición falla, o responde con un error, ambas páginas muestran "No se pudo cargar ...".
+- **Seguimiento por usuario desde ambos lados.** La tabla de usuarios internos tiene un botón "Historial" por fila, y en la trazabilidad el nombre del usuario enlaza a su historial. Cuando `usuario_id` es nulo, el nombre se muestra sin enlace.
+- **El encabezado del historial muestra el nombre de usuario.** Lo obtiene con `getUsuario(id)`; si no se puede leer, muestra `Usuario #id`.
+
+### Pantallas entregadas
+
+| Ruta | Qué permite hacer |
+|---|---|
+| `/usuarios/{id}/historial` | Ver las acciones de un usuario, de la más reciente a la más antigua, con columnas Fecha, Acción y Detalle. Filtrar por rango de fechas (Desde, Hasta, Filtrar y Limpiar). Enlace de regreso a Usuarios internos. |
+| `/trazabilidad` | Ver las acciones de todos los usuarios, con columnas Usuario, Tipo, Acción, Detalle y Fecha. Filtrar por tipo de usuario: administrador, recepcionista, operario o cliente. |
+
+Archivos: `app/usuarios/[id]/historial/{page,filtro-fechas}.tsx`, `app/trazabilidad/{page,tabla-trazabilidad,filtro-tipo}.tsx`, `app/trazabilidad/tipos.ts` y `lib/auditoria.ts`. Las llamadas pasan por `getHistorialUsuario`, `getUsuario` y `getTrazabilidad` de `lib/api.ts`; en #33 el campo `accion` de `AccionAuditoria` pasó de `string` a `AccionUsuario`.
+
+### Desviaciones y pendientes
+
+- **La trazabilidad no filtra por fechas.** RF11 habla de filtrar por usuario y/o rango de fechas. El historial cubre ambos (el usuario lo fija la URL), pero la trazabilidad global solo filtra por tipo de usuario.
+- **Sin paginación ni filtro de fechas en el servidor.** Las dos pantallas descargan la lista completa y la pintan entera, y el historial filtra en el navegador. Funciona con pocos registros, pero no escala. Depende de lo mismo que se anota en la sección 1.
+- **Filtrar por `cliente` siempre queda vacío.** El filtro de la trazabilidad lo ofrece, pero el backend nunca registra ese tipo (sección 1), así que siempre aparece "No hay acciones registradas para este filtro.".
+- **El control de acceso es solo de pantalla.** La redirección por rol vive en estas páginas y el backend sigue sin exigir rol. El control general lo resuelve T8 (SCRUM-57).
