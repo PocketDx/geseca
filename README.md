@@ -446,16 +446,14 @@ Despues entra al Django Admin del backend desplegado (`/admin`) y ponle el rol
 
 **4. Correo de recuperacion.** Sin `RESEND_API_KEY` el correo se imprime en
 consola y en produccion no llega nada. Render gratuito bloquea los puertos SMTP,
-asi que el envio usa la API HTTP de [Resend](https://resend.com). Define en Render:
+asi que el envio usa la API HTTP de [Resend](https://resend.com). En Render solo
+hay que definir `RESEND_API_KEY` (la clave de la API, desde el panel de Resend):
+no la pongas en ningun archivo del repositorio.
 
-| Variable | Valor |
-|----------|-------|
-| `RESEND_API_KEY` | La clave de la API, desde el panel de Resend |
-| `DEFAULT_FROM_EMAIL` | El remitente, ej. `SmartWash <no-reply@tu-dominio.com>` |
-
-Mientras no verifiques un dominio en Resend, solo puede enviar desde
-`onboarding@resend.dev` y solo al correo de tu propia cuenta de Resend. Para
-escribirle a otros usuarios hay que verificar un dominio.
+El remitente (`DEFAULT_FROM_EMAIL`) ya queda en `SmartWash <onboarding@resend.dev>`,
+el de pruebas de Resend. Con ese remitente **solo se puede escribir al correo de
+tu propia cuenta de Resend**: para que otros usuarios reciban el enlace, verifica
+un dominio en Resend y cambia `DEFAULT_FROM_EMAIL` por una direccion de ese dominio.
 
 Limitaciones conocidas: los contadores de intentos de login y de recuperacion
 viven en la memoria del proceso (por eso `--workers 1` y se reinician al
