@@ -1,10 +1,17 @@
+import io
+import json
+from unittest import mock
+from urllib.error import HTTPError, URLError
+
 from django.contrib.auth import get_user_model
+from django.core.mail import EmailMessage
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 from rest_framework.test import APITestCase
 
 from clientes.models import Cliente
+from core.email import ResendEmailBackend
 
 User = get_user_model()
 
@@ -97,3 +104,52 @@ class SeedUsuariosTests(TestCase):
             call_command("seed_usuarios", verbosity=0)
 
         self.assertEqual(User.objects.count(), 0)
+
+
+@override_settings(RESEND_API_KEY="re_clave_de_prueba")
+class ResendEmailBackendTests(TestCase):
+    def mensaje(self):
+        return EmailMessage(
+            subject="Asunto",
+            body="Cuerpo",
+            from_email="SmartWash <no-reply@smartwash.test>",
+            to=["ana@smartwash.test"],
+        )
+
+    @mock.patch("core.email.urllib.request.urlopen")
+    def test_envia_el_correo_por_la_api_http_de_resend(self, urlopen):
+        enviados = ResendEmailBackend().send_messages([self.mensaje()])
+
+        self.assertEqual(enviados, 1)
+        peticion = urlopen.call_args.args[0]
+        self.assertEqual(peticion.full_url, "https://api.resend.com/emails")
+        self.assertEqual(peticion.get_header("Authorization"), "Bearer re_clave_de_prueba")
+        self.assertEqual(
+            json.loads(peticion.data),
+            {
+                "from": "SmartWash <no-reply@smartwash.test>",
+                "to": ["ana@smartwash.test"],
+                "subject": "Asunto",
+                "text": "Cuerpo",
+            },
+        )
+
+    @mock.patch("core.email.urllib.request.urlopen")
+    def test_un_rechazo_del_proveedor_falla_sin_exponer_la_clave(self, urlopen):
+        urlopen.side_effect = HTTPError(
+            "https://api.resend.com/emails", 403, "Forbidden", {}, io.BytesIO(b'{"message":"dominio"}')
+        )
+
+        with self.assertRaises(RuntimeError) as contexto:
+            ResendEmailBackend().send_messages([self.mensaje()])
+
+        self.assertIn("403", str(contexto.exception))
+        self.assertNotIn("re_clave_de_prueba", str(contexto.exception))
+
+    @mock.patch("core.email.urllib.request.urlopen")
+    def test_fail_silently_no_propaga_el_error_y_no_cuenta_el_envio(self, urlopen):
+        urlopen.side_effect = URLError("sin red")
+
+        enviados = ResendEmailBackend(fail_silently=True).send_messages([self.mensaje()])
+
+        self.assertEqual(enviados, 0)

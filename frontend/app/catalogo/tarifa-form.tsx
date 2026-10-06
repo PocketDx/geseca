@@ -12,6 +12,7 @@ export const ETIQUETAS_TARIFA = {
   tipo_prenda: "Tipo de prenda",
   servicio: "Servicio",
   valor: "Valor",
+  unidad_cobro: "Unidad de cobro",
   plazo_entrega_dias: "Plazo de entrega",
   vigente_desde: "Vigente desde",
   vigente_hasta: "Vigente hasta",
@@ -44,6 +45,7 @@ export default function TarifaForm({
       tipo_prenda: Number(form.get("tipo_prenda")),
       servicio: Number(form.get("servicio")),
       valor: String(form.get("valor") ?? "0"),
+      unidad_cobro: form.get("unidad_cobro") === "prenda" ? "prenda" : "kilo",
       plazo_entrega_dias: Number(form.get("plazo_entrega_dias") ?? 1),
       vigente_desde: String(form.get("vigente_desde") ?? ""),
       vigente_hasta: null,
@@ -89,6 +91,12 @@ export default function TarifaForm({
       </ClayField>
       <ClayField label="Valor (COP)">
         <ClayInput name="valor" type="number" min="0" step="0.01" required />
+      </ClayField>
+      <ClayField label="Unidad de cobro">
+        <ClaySelect name="unidad_cobro" defaultValue="kilo" required>
+          <option value="kilo">Por kilo</option>
+          <option value="prenda">Por prenda</option>
+        </ClaySelect>
       </ClayField>
       <ClayField label="Plazo de entrega (dias)">
         <ClayInput name="plazo_entrega_dias" type="number" min="1" required />

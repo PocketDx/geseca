@@ -23,7 +23,7 @@ from rest_framework.throttling import ScopedRateThrottle, SimpleRateThrottle
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema  # <-- Importamos extend_schema
 
-from .models import RegistroAuditoria
+from .models import RegistroAuditoria, User
 from .serializers import (
     MENSAJE_ULTIMO_ADMIN,
     AccionAuditoriaSerializer,
@@ -281,6 +281,22 @@ class UsuarioDesactivarView(APIView):
         usuario.is_active = False
         usuario._realizado_por = request.user
         usuario.save(update_fields=["is_active"])
+        return Response(UsuarioAdminSerializer(usuario).data)
+
+
+class UsuarioActivarView(APIView):
+    def post(self, request, pk):
+        if request.user.rol != User.Rol.ADMINISTRADOR:
+            return Response(
+                {"detail": "Solo un administrador puede activar usuarios."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        usuario = get_object_or_404(get_user_model(), pk=pk)
+        # Sin cambio no se guarda: la senal registraria una edicion vacia.
+        if not usuario.is_active:
+            usuario.is_active = True
+            usuario._realizado_por = request.user
+            usuario.save(update_fields=["is_active"])
         return Response(UsuarioAdminSerializer(usuario).data)
 
 

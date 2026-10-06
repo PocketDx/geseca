@@ -9,6 +9,7 @@ from .views import (
     MeView,
     RecuperarPasswordView,
     TrazabilidadView,
+    UsuarioActivarView,
     UsuarioDesactivarView,
     UsuarioInternoDetailView,
     UsuarioInternoListCreateView,
@@ -30,4 +31,5 @@ urlpatterns = [
     path("usuarios/<int:pk>", UsuarioInternoDetailView.as_view(), name="usuario-detalle"),
     path("usuarios/<int:pk>/historial", HistorialUsuarioView.as_view(), name="usuario-historial"),
     path("usuarios/<int:pk>/desactivar", UsuarioDesactivarView.as_view(), name="usuario-desactivar"),
+    path("usuarios/<int:pk>/activar", UsuarioActivarView.as_view(), name="usuario-activar"),
 ]

@@ -299,3 +299,97 @@ class CatalogoApiTests(APITestCase):
         response = self.client.post("/api/catalogo/servicios", {"nombre": "Planchado"})
         self.assertEqual(response.status_code, 403)
         self.assertFalse(Servicio.objects.filter(nombre="Planchado").exists())
+
+    def test_la_tarifa_se_cobra_por_kilo_si_no_se_indica_la_unidad(self):
+        response = self.client.post("/api/catalogo/tarifas", self.datos_tarifa())
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["unidad_cobro"], "kilo")
+
+    def test_crea_una_tarifa_por_prenda(self):
+        response = self.client.post(
+            "/api/catalogo/tarifas", self.datos_tarifa(unidad_cobro="prenda")
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Tarifa.objects.get().unidad_cobro, Tarifa.UnidadCobro.PRENDA)
+
+    def test_rechaza_una_unidad_de_cobro_desconocida(self):
+        response = self.client.post(
+            "/api/catalogo/tarifas", self.datos_tarifa(unidad_cobro="metro")
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("unidad_cobro", response.json())
+        self.assertFalse(Tarifa.objects.exists())
+
+    def test_cambia_la_unidad_de_cobro_de_una_tarifa_existente(self):
+        tarifa_id = self.client.post("/api/catalogo/tarifas", self.datos_tarifa()).json()["id"]
+        response = self.client.patch(
+            f"/api/catalogo/tarifas/{tarifa_id}",
+            {"unidad_cobro": "prenda"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Tarifa.objects.get(pk=tarifa_id).unidad_cobro, "prenda")
+
+
+class CatalogoPermisosTests(APITestCase):
+    def setUp(self):
+        User.objects.create_user(
+            username="admin", password="smartwash123", rol=User.Rol.ADMINISTRADOR
+        )
+        User.objects.create_user(
+            username="recepcion", password="smartwash123", rol=User.Rol.RECEPCIONISTA
+        )
+        self.camisa = TipoPrenda.objects.create(nombre="Camisa")
+        self.lavado = Servicio.objects.create(nombre="Lavado")
+        self.tarifa = Tarifa.objects.create(
+            tipo_prenda=self.camisa,
+            servicio=self.lavado,
+            valor="8000.00",
+            plazo_entrega_dias=2,
+            vigente_desde="2026-01-01",
+        )
+        self.client.login(username="recepcion", password="smartwash123")
+
+    def test_el_recepcionista_consulta_el_catalogo(self):
+        for ruta in ("tipos-prenda", "servicios", "tarifas"):
+            with self.subTest(ruta=ruta):
+                self.assertEqual(self.client.get(f"/api/catalogo/{ruta}").status_code, 200)
+        self.assertEqual(self.client.get(f"/api/catalogo/tarifas/{self.tarifa.pk}").status_code, 200)
+
+    def test_el_recepcionista_no_crea_nada_en_el_catalogo(self):
+        creaciones = {
+            "tipos-prenda": {"nombre": "Cobija"},
+            "servicios": {"nombre": "Planchado"},
+            "tarifas": {
+                "tipo_prenda": self.camisa.pk,
+                "servicio": self.lavado.pk,
+                "valor": "9000.00",
+                "plazo_entrega_dias": 2,
+                "vigente_desde": "2026-06-01",
+            },
+        }
+        for ruta, datos in creaciones.items():
+            with self.subTest(ruta=ruta):
+                self.assertEqual(self.client.post(f"/api/catalogo/{ruta}", datos).status_code, 403)
+        self.assertEqual(TipoPrenda.objects.count(), 1)
+        self.assertEqual(Servicio.objects.count(), 1)
+        self.assertEqual(Tarifa.objects.count(), 1)
+
+    def test_el_recepcionista_no_edita_el_catalogo(self):
+        ediciones = {
+            f"tipos-prenda/{self.camisa.pk}": {"nombre": "Otra"},
+            f"servicios/{self.lavado.pk}": {"nombre": "Otro"},
+            f"tarifas/{self.tarifa.pk}": {"valor": "1.00"},
+        }
+        for ruta, datos in ediciones.items():
+            with self.subTest(ruta=ruta):
+                self.assertEqual(
+                    self.client.patch(f"/api/catalogo/{ruta}", datos, format="json").status_code, 403
+                )
+        self.tarifa.refresh_from_db()
+        self.assertEqual(self.tarifa.valor, Decimal("8000.00"))
+
+    def test_el_administrador_si_escribe_en_el_catalogo(self):
+        self.client.login(username="admin", password="smartwash123")
+        response = self.client.post("/api/catalogo/servicios", {"nombre": "Planchado"})
+        self.assertEqual(response.status_code, 201)

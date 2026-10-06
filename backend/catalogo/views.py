@@ -1,25 +1,31 @@
 from rest_framework import generics
 
+from core.permissions import SoloAdministradorEscribe
+
 from .models import Servicio, TipoPrenda, Tarifa
 from .serializers import ServicioSerializer, TarifaSerializer, TipoPrendaSerializer
 
 
 class ServicioListCreateView(generics.ListCreateAPIView):
+    permission_classes = [SoloAdministradorEscribe]
     queryset = Servicio.objects.all()
     serializer_class = ServicioSerializer
 
 
 class ServicioDetailView(generics.RetrieveUpdateAPIView):
+    permission_classes = [SoloAdministradorEscribe]
     queryset = Servicio.objects.all()
     serializer_class = ServicioSerializer
 
 
 class TipoPrendaListCreateView(generics.ListCreateAPIView):
+    permission_classes = [SoloAdministradorEscribe]
     queryset = TipoPrenda.objects.all()
     serializer_class = TipoPrendaSerializer
 
 
 class TipoPrendaDetailView(generics.RetrieveUpdateAPIView):
+    permission_classes = [SoloAdministradorEscribe]
     queryset = TipoPrenda.objects.all()
     serializer_class = TipoPrendaSerializer
 
@@ -27,6 +33,7 @@ class TipoPrendaDetailView(generics.RetrieveUpdateAPIView):
 class TarifaListCreateView(generics.ListCreateAPIView):
     """Con ?vigentes=1 devuelve solo las tarifas que se usan para cotizar."""
 
+    permission_classes = [SoloAdministradorEscribe]
     serializer_class = TarifaSerializer
 
     def get_queryset(self):
@@ -37,5 +44,6 @@ class TarifaListCreateView(generics.ListCreateAPIView):
 
 
 class TarifaDetailView(generics.RetrieveUpdateAPIView):
+    permission_classes = [SoloAdministradorEscribe]
     queryset = Tarifa.objects.select_related("tipo_prenda", "servicio")
     serializer_class = TarifaSerializer

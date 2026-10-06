@@ -28,6 +28,10 @@ class Servicio(ModeloConAutoria):
 
 
 class Tarifa(ModeloConAutoria):
+    class UnidadCobro(models.TextChoices):
+        KILO = "kilo", "Kilo"
+        PRENDA = "prenda", "Prenda"
+
     tipo_prenda = models.ForeignKey(
         TipoPrenda, on_delete=models.PROTECT, related_name="tarifas"
     )
@@ -35,6 +39,12 @@ class Tarifa(ModeloConAutoria):
         Servicio, on_delete=models.PROTECT, related_name="tarifas"
     )
     valor = models.DecimalField(max_digits=10, decimal_places=2)
+    unidad_cobro = models.CharField(
+        max_length=10,
+        choices=UnidadCobro.choices,
+        default=UnidadCobro.KILO,
+        help_text="Unidad por la que se multiplica el valor.",
+    )
     plazo_entrega_dias = models.PositiveIntegerField()
     vigente_desde = models.DateField()
     vigente_hasta = models.DateField(
