@@ -258,6 +258,52 @@ class UsuarioInternoTests(APITestCase):
         self.assertFalse(usuario.is_active)
         self.assertTrue(User.objects.filter(pk=usuario.id).exists())
 
+    def test_activar_devuelve_la_cuenta_a_un_usuario_desactivado_y_puede_iniciar_sesion(self):
+        usuario = User.objects.create_user(
+            username="operario1", password="x", rol=User.Rol.OPERARIO, is_active=False
+        )
+        self.assertFalse(APIClient().login(username="operario1", password="x"))
+
+        response = self.client.post(f"/api/usuarios/{usuario.id}/activar")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["is_active"])
+        usuario.refresh_from_db()
+        self.assertTrue(usuario.is_active)
+        self.assertTrue(APIClient().login(username="operario1", password="x"))
+
+    def test_activar_a_un_usuario_ya_activo_no_cambia_nada_ni_registra_accion(self):
+        usuario = User.objects.create_user(username="operario1", password="x", rol=User.Rol.OPERARIO)
+        antes = RegistroAuditoria.objects.filter(usuario=usuario).count()
+
+        response = self.client.post(f"/api/usuarios/{usuario.id}/activar")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RegistroAuditoria.objects.filter(usuario=usuario).count(), antes)
+
+    def test_solo_un_administrador_puede_activar_usuarios(self):
+        User.objects.create_user(username="recepcion1", password="x", rol=User.Rol.RECEPCIONISTA)
+        usuario = User.objects.create_user(
+            username="operario1", password="x", rol=User.Rol.OPERARIO, is_active=False
+        )
+        self.client.login(username="recepcion1", password="x")
+
+        response = self.client.post(f"/api/usuarios/{usuario.id}/activar")
+
+        self.assertEqual(response.status_code, 403)
+        usuario.refresh_from_db()
+        self.assertFalse(usuario.is_active)
+
+    def test_activar_exige_sesion(self):
+        usuario = User.objects.create_user(
+            username="operario1", password="x", rol=User.Rol.OPERARIO, is_active=False
+        )
+        self.client.logout()
+        response = self.client.post(f"/api/usuarios/{usuario.id}/activar")
+        self.assertEqual(response.status_code, 403)
+        usuario.refresh_from_db()
+        self.assertFalse(usuario.is_active)
+
     def test_crear_con_una_contrasena_debil_se_rechaza_con_el_motivo(self):
         response = self.client.post(
             "/api/usuarios",
@@ -344,6 +390,15 @@ class AuditoriaTests(APITestCase):
         self.client.post(f"/api/usuarios/{usuario.id}/desactivar")
         ultimo = RegistroAuditoria.objects.filter(usuario=usuario).latest("fecha")
         self.assertEqual(ultimo.accion, RegistroAuditoria.Accion.DESACTIVADO)
+        self.assertEqual(ultimo.detalle, "por admin")
+
+    def test_activar_desde_el_api_registra_la_accion_activado_y_quien_lo_hizo(self):
+        usuario = User.objects.create_user(
+            username="operario1", password="x", rol=User.Rol.OPERARIO, is_active=False
+        )
+        self.client.post(f"/api/usuarios/{usuario.id}/activar")
+        ultimo = RegistroAuditoria.objects.filter(usuario=usuario).latest("fecha")
+        self.assertEqual(ultimo.accion, RegistroAuditoria.Accion.ACTIVADO)
         self.assertEqual(ultimo.detalle, "por admin")
 
     def test_el_historial_de_un_usuario_devuelve_solo_sus_propias_acciones(self):
