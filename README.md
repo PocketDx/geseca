@@ -444,9 +444,16 @@ DATABASE_URL="<External Database URL>" python manage.py createsuperuser
 Despues entra al Django Admin del backend desplegado (`/admin`) y ponle el rol
 `administrador` a ese usuario; sin el rol no ve fidelizacion ni trazabilidad.
 
-**4. Correo de recuperacion.** Por defecto se imprime en consola, asi que en
-produccion no llega nada. Define `EMAIL_BACKEND` y las variables `EMAIL_*` (ver
-`backend/.env.example`) en Render para enviarlo por SMTP.
+**4. Correo de recuperacion.** Sin `RESEND_API_KEY` el correo se imprime en
+consola y en produccion no llega nada. Render gratuito bloquea los puertos SMTP,
+asi que el envio usa la API HTTP de [Resend](https://resend.com). En Render solo
+hay que definir `RESEND_API_KEY` (la clave de la API, desde el panel de Resend):
+no la pongas en ningun archivo del repositorio.
+
+El remitente (`DEFAULT_FROM_EMAIL`) ya queda en `SmartWash <onboarding@resend.dev>`,
+el de pruebas de Resend. Con ese remitente **solo se puede escribir al correo de
+tu propia cuenta de Resend**: para que otros usuarios reciban el enlace, verifica
+un dominio en Resend y cambia `DEFAULT_FROM_EMAIL` por una direccion de ese dominio.
 
 Limitaciones conocidas: los contadores de intentos de login y de recuperacion
 viven en la memoria del proceso (por eso `--workers 1` y se reinician al

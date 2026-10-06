@@ -143,10 +143,14 @@ PASSWORD_RESET_TIMEOUT = 60 * 60
 # Base de los enlaces que Django envia por correo (apuntan a paginas de Next.js).
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
-# * En desarrollo el correo se imprime en la consola de runserver; para enviarlo
-# * de verdad basta con apuntar EMAIL_BACKEND al de SMTP desde el .env.
+# * Sin clave de Resend el correo se imprime en la consola de runserver; con
+# * RESEND_API_KEY se envia por su API HTTP (Render gratuito bloquea el SMTP).
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 EMAIL_BACKEND = os.getenv(
-    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+    "EMAIL_BACKEND",
+    "core.email.ResendEmailBackend"
+    if RESEND_API_KEY
+    else "django.core.mail.backends.console.EmailBackend",
 )
 EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))

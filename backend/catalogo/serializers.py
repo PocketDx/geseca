@@ -61,6 +61,7 @@ class TarifaSerializer(ConAutoriaSerializer):
             "servicio",
             "servicio_nombre",
             "valor",
+            "unidad_cobro",
             "plazo_entrega_dias",
             "vigente_desde",
             "vigente_hasta",
